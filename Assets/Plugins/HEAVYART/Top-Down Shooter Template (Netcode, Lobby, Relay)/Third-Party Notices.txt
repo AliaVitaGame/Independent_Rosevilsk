@@ -1,0 +1,14 @@
+This package contains third-party software components governed by the license(s) indicated below:
+
+Component Name: Starter Assets - Third Person Character Controller | URP
+License Type: Unity Companion License
+License Details: https://unity.com/legal/licenses/unity-companion-license
+
+Component Name: Robot Kyle | URP
+License Type: Unity Companion License
+License Details: https://unity.com/legal/licenses/unity-companion-license
+
+Component Name: Particle Pack
+License Type: Unity Companion License
+License Details: https://unity.com/legal/licenses/unity-companion-license
+
