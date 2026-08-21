@@ -1,7 +1,5 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -71,23 +69,8 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         private void FixedUpdate()
         {
-            if (gameTimerTextComponent == null) return;
-
-            //Game timer
-            if (GameManager.Instance.gameState == GameState.ActiveGame)
-            {
-                TimeSpan timeSpan = TimeSpan.FromSeconds(GameManager.Instance.gameEndTime - NetworkManager.Singleton.ServerTime.Time);
-                double gameDuration = GameManager.Instance.gameEndTime - GameManager.Instance.gameStartTime;
-                double timeLeft = timeSpan.TotalSeconds;
-
-                //Change text color
-                gameTimerTextComponent.color = timeColor.Evaluate(1 - (float)(timeLeft / gameDuration));
-
-                //Show how much time left
-                gameTimerTextComponent.text = timeSpan.ToString(@"mm\:ss"); //Format 00:00
-            }
-            else
-                gameTimerTextComponent.text = string.Empty;
+            if (gameTimerTextComponent != null)
+                gameTimerTextComponent.gameObject.SetActive(false);
         }
     }
 }

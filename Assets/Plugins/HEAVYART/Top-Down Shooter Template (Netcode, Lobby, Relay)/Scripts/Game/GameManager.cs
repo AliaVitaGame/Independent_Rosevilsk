@@ -23,10 +23,6 @@ namespace HEAVYART.TopDownShooter.Netcode
         public Action OnDisconnect;
 
         public double gameStartTime { get; private set; }
-        public double gameEndTime { get; private set; }
-
-        public Dictionary<ulong, LeaderboardUserProfile> leaderboard = new Dictionary<ulong, LeaderboardUserProfile>();
-
         private NetworkManager networkManager;
         private UnityTransport networkTransport;
 
@@ -129,65 +125,28 @@ namespace HEAVYART.TopDownShooter.Netcode
                 //Room is full
                 if (connectedPlayersCount >= expectedPlayersCount)
                 {
-                    float networkDelay = 0.5f;
-
-                    double startTime =
-                        NetworkManager.ServerTime.Time
-                        + SettingsManager.Instance.gameplay.delayBeforeCountdown //a little time for user to figure out what's going on around, after scene has been loaded
-                        + SettingsManager.Instance.gameplay.countdownTime // 3..2..1..GO!
-                        + networkDelay;
-
-                    double endTime = startTime + SettingsManager.Instance.gameplay.gameDuration;
-
-                    //Broadcast start countdown command
-                    if (IsServer) StartCountdownRpc(startTime, endTime);
-                }
-            }
-
-            //Handle countdown
-            if (gameState == GameState.WaitingForCountdown)
-            {
-                if (NetworkManager.ServerTime.Time >= gameStartTime)
-                {
-                    //Start game
-                    gameState = GameState.ActiveGame;
-                    OnGameStart?.Invoke();
-                }
-            }
-
-            //Handle active game
-            if (gameState == GameState.ActiveGame)
-            {
-                if (NetworkManager.ServerTime.Time >= gameEndTime)
-                {
-                    //End game
-                    gameState = GameState.GameIsOver;
-                    OnGameEnd?.Invoke();
+                    if (IsServer)
+                        StartSandboxRpc(NetworkManager.ServerTime.Time);
                 }
             }
         }
 
         [Rpc(SendTo.Everyone)]
-        private void StartCountdownRpc(double gameStartTime, double gameEndTime)
+        private void StartSandboxRpc(double startTime)
         {
-            //Receive and apply
-
-            this.gameStartTime = gameStartTime;
-            this.gameEndTime = gameEndTime;
-
-            gameState = GameState.WaitingForCountdown;
+            gameStartTime = startTime;
+            gameState = GameState.ActiveGame;
+            OnGameStart?.Invoke();
         }
 
         public void RegisterCharacterDeath(ulong playerID)
         {
-            //Increase scores
-            leaderboard[playerID].score++;
+            // Sandbox gameplay has no score or win-condition tracking.
         }
 
         public void AddLeaderboardUser(LeaderboardUserProfile userProfile)
         {
-            if (leaderboard.ContainsKey(userProfile.id) == false)
-                leaderboard.Add(userProfile.id, userProfile);
+            // Kept as a compatibility entry point for existing player setup.
         }
 
         private void OnClientDisconnectCallback(ulong clientID)

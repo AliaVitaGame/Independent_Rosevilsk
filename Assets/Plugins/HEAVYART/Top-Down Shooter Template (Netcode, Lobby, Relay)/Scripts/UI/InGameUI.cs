@@ -1,7 +1,5 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,8 +16,6 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         private void Start()
         {
-            GameManager.Instance.OnGameEnd += ShowEndOfGamePopup;
-
             if (Application.isMobilePlatform)
                 screenJoystick.gameObject.SetActive(true);
         }
@@ -64,21 +60,8 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         private void FixedUpdate()
         {
-            //Countdown
-            if (GameManager.Instance.gameState == GameState.WaitingForCountdown)
-            {
-                TimeSpan timeSpan = TimeSpan.FromSeconds(GameManager.Instance.gameStartTime - NetworkManager.Singleton.ServerTime.Time);
-
-                //Show seconds
-                if (timeSpan.Seconds <= 3)
-                    countdownTextComponent.text = "" + timeSpan.Seconds;
-
-                //But if seconds are less than one, show "GO!" text
-                if (timeSpan.Seconds == 0)
-                    countdownTextComponent.text = "GO!";
-            }
-            else
-                countdownTextComponent.text = string.Empty;
+            if (countdownTextComponent != null)
+                countdownTextComponent.gameObject.SetActive(false);
         }
     }
 }
