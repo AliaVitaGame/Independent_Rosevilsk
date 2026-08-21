@@ -1,0 +1,19 @@
+// This file is generated. Do not modify by hand.
+// XML documentation file not found. To check if public methods have XML comments,
+// make sure the XML doc file is present and located next to the scraped dll
+namespace Unity.Services.Multiplay.Authoring.Editor
+{
+    public static class MultiplayAuthoringServices
+    {
+        public static Shared.DependencyInversion.IScopedServiceProvider Provider { get; }
+        public static T GetService<T>(this System.IServiceProvider provider);
+    }
+}
+
+namespace Unity.Services.Multiplay.Authoring.Editor.Shared.DependencyInversion
+{
+    public interface IScopedServiceProvider : System.IDisposable, System.IServiceProvider
+    {
+        public IScopedServiceProvider CreateScope();
+    }
+}

@@ -1,0 +1,42 @@
+:root
+{
+    padding: 10px;
+    background-color: var(--unity-colors-window-background);
+}
+
+ProgressBar
+{
+    margin-top: 0;
+    margin-bottom: 5px;
+    margin-left: 0;
+    margin-right: 0;
+    height: 10px;
+}
+
+.progress-bar-container{
+    flex-direction: row;
+}
+
+.progress-bar{
+    flex-grow:1;
+    height:20px;
+}
+
+#LoadingIcon
+{
+    margin-right: 5px;
+    height: 16px;
+    width: 16px;
+}
+
+.cancel-button{
+    bottom: 10px;
+    position: absolute;
+    right:10px;
+    width: 50px;
+}
+
+.progress-bar-zero .unity-progress-bar__progress
+{
+    max-width: 0px;
+}

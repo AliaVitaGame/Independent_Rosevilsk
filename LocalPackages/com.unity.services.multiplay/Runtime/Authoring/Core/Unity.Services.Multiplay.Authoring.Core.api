@@ -1,0 +1,464 @@
+// This file is generated. Do not modify by hand.
+// XML documentation file not found. To check if public methods have XML comments,
+// make sure the XML doc file is present and located next to the scraped dll
+namespace Unity.Services.Multiplay.Authoring.Core.Assets
+{
+    public readonly struct BuildConfigurationName : IResourceName
+    {
+        public string Name { get; set; }
+        public override bool Equals(object obj);
+        public override int GetHashCode();
+        public override string ToString();
+    }
+
+    public readonly struct BuildName : IResourceName
+    {
+        public string Name { get; set; }
+        public override bool Equals(object obj);
+        public override int GetHashCode();
+        public static bool operator ==(BuildName left, BuildName right);
+        public static bool operator !=(BuildName left, BuildName right);
+        public override string ToString();
+    }
+
+    public readonly struct FleetName : IResourceName
+    {
+        public string Name { get; set; }
+        public FleetName(string name) {}
+        public override bool Equals(object obj);
+        public override int GetHashCode();
+        public override string ToString();
+    }
+
+    public interface IResourceName
+    {
+        public string Name { get; set; }
+    }
+
+    public class MultiplayConfig
+    {
+        public System.Collections.Generic.IDictionary<BuildConfigurationName, MultiplayConfig.BuildConfigurationDefinition> BuildConfigurations { get; set; }
+        public System.Collections.Generic.IDictionary<BuildName, MultiplayConfig.BuildDefinition> Builds { get; set; }
+        public System.Collections.Generic.IDictionary<FleetName, MultiplayConfig.FleetDefinition> Fleets { get; set; }
+        public string Version { get; set; }
+        public MultiplayConfig() {}
+        public class BuildConfigurationDefinition
+        {
+            public string BinaryPath { get; set; }
+            public BuildName Build { get; set; }
+            public string CommandLine { get; set; }
+            public int Cores { get; set; }
+            public int MemoryMiB { get; set; }
+            public System.Nullable<MultiplayConfig.Query> QueryType { get; set; }
+            public int SpeedMhz { get; set; }
+            public System.Collections.Generic.IDictionary<string, string> Variables { get; set; }
+            public BuildConfigurationDefinition() {}
+        }
+        public class BuildDefinition
+        {
+            public string BuildPath { get; set; }
+            public string ExecutableName { get; set; }
+            public BuildDefinition() {}
+        }
+        public class FleetDefinition
+        {
+            public System.Collections.Generic.IList<BuildConfigurationName> BuildConfigurations { get; set; }
+            public System.Collections.Generic.IDictionary<string, MultiplayConfig.ScalingDefinition> Regions { get; set; }
+            public FleetDefinition() {}
+        }
+        public enum Query
+        {
+            A2s = 1,
+            None = 2,
+            Sqp = 0,
+        }
+        public class ScalingDefinition
+        {
+            public int MaxServers { get; set; }
+            public int MinAvailable { get; set; }
+            public bool Online { get; set; }
+            public ScalingDefinition() {}
+        }
+    }
+}
+
+namespace Unity.Services.Multiplay.Authoring.Core.Builds
+{
+    public struct CloudBucketId
+    {
+        public System.Guid Guid { get; set; }
+        public override string ToString();
+    }
+}
+
+namespace Unity.Services.Multiplay.Authoring.Core.Deployment
+{
+    public class BuildUploadResult : System.IEquatable<BuildUploadResult>
+    {
+        public Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId BuildId { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Model.BuildItem BuildItem { get; set; }
+        public int Changes { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Builds.CloudBucketId CloudBucketId { get; set; }
+        protected virtual System.Type EqualityContract { get; }
+        protected BuildUploadResult(BuildUploadResult original) {}
+        public BuildUploadResult(Unity.Services.Multiplay.Authoring.Core.Model.BuildItem BuildItem, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId BuildId, Unity.Services.Multiplay.Authoring.Core.Builds.CloudBucketId CloudBucketId, int Changes) {}
+        public virtual BuildUploadResult <Clone>$();
+        public void Deconstruct(out Unity.Services.Multiplay.Authoring.Core.Model.BuildItem BuildItem, out Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId BuildId, out Unity.Services.Multiplay.Authoring.Core.Builds.CloudBucketId CloudBucketId, out int Changes);
+        public override bool Equals(object obj);
+        public virtual bool Equals(BuildUploadResult other);
+        public override int GetHashCode();
+        public static bool operator ==(BuildUploadResult left, BuildUploadResult right);
+        public static bool operator !=(BuildUploadResult left, BuildUploadResult right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public interface IMultiplayDeployer
+    {
+        public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem>, System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem>>> BuildBinaries(System.Collections.Generic.IReadOnlyList<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> buildItems, System.Threading.CancellationToken token = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<Unity.Services.Multiplay.Authoring.Core.MultiplayApi.AllocationInformation> CreateAndSyncTestAllocationAsync(Unity.Services.Multiplay.Authoring.Core.Assets.FleetName fleetName, Unity.Services.Multiplay.Authoring.Core.Assets.BuildConfigurationName buildConfigurationName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task DeleteFleet(Unity.Services.Multiplay.Authoring.Core.MultiplayApi.FleetId fleetName);
+        public System.Threading.Tasks.Task Deploy(System.Collections.Generic.IReadOnlyList<Unity.Services.DeploymentApi.Editor.DeploymentItem> items, System.Threading.CancellationToken token = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildConfigurationName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildConfigurationId>, System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildConfigurationItem>>> DeployBuildConfigs(System.Collections.Generic.IReadOnlyList<Unity.Services.Multiplay.Authoring.Core.Model.BuildConfigurationItem> buildConfigurationItems, System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId> successfulUploads, System.Threading.CancellationToken token);
+        public System.Threading.Tasks.Task DeployFleets(System.Collections.Generic.IReadOnlyList<Unity.Services.Multiplay.Authoring.Core.Model.FleetItem> items, System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildConfigurationName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildConfigurationId> buildConfigIds = default(System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildConfigurationName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildConfigurationId>), System.Threading.CancellationToken token = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, System.Guid>> GetAvailableRegions();
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Unity.Services.Multiplay.Authoring.Core.MultiplayApi.FleetInfo>> GetFleets();
+        public System.Threading.Tasks.Task InitAsync();
+        public System.Threading.Tasks.Task<System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.MultiplayApi.AllocationInformation>> ListTestAllocations(Unity.Services.Multiplay.Authoring.Core.MultiplayApi.FleetId fleetId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task RemoveTestAllocation(Unity.Services.Multiplay.Authoring.Core.MultiplayApi.FleetId fleetId, System.Guid allocationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<IMultiplayDeployer.UploadResult> UploadAndSyncBuilds(System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> successfulBuilds, System.Threading.CancellationToken token = default(System.Threading.CancellationToken));
+        public class UploadResult : System.IEquatable<IMultiplayDeployer.UploadResult>
+        {
+            protected virtual System.Type EqualityContract { get; }
+            public System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedSyncs { get; set; }
+            public System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedUploads { get; set; }
+            public System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId> SuccessfulSyncs { get; set; }
+            public System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem, BuildUploadResult> UploadResults { get; set; }
+            protected UploadResult(IMultiplayDeployer.UploadResult original) {}
+            public UploadResult(System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem, BuildUploadResult> UploadResults, System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedUploads, System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId> SuccessfulSyncs, System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedSyncs) {}
+            public virtual IMultiplayDeployer.UploadResult <Clone>$();
+            public void Deconstruct(out System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem, BuildUploadResult> UploadResults, out System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedUploads, out System.Collections.Generic.Dictionary<Unity.Services.Multiplay.Authoring.Core.Assets.BuildName, Unity.Services.Multiplay.Authoring.Core.MultiplayApi.BuildId> SuccessfulSyncs, out System.Collections.Generic.List<Unity.Services.Multiplay.Authoring.Core.Model.BuildItem> FailedSyncs);
+            public override bool Equals(object obj);
+            public virtual bool Equals(IMultiplayDeployer.UploadResult other);
+            public override int GetHashCode();
+            public static bool operator ==(IMultiplayDeployer.UploadResult left, IMultiplayDeployer.UploadResult right);
+            public static bool operator !=(IMultiplayDeployer.UploadResult left, IMultiplayDeployer.UploadResult right);
+            protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+            public override string ToString();
+        }
+    }
+}
+
+namespace Unity.Services.Multiplay.Authoring.Core.Model
+{
+    public class BuildConfigurationItem : Unity.Services.DeploymentApi.Editor.DeploymentItem
+    {
+        public Unity.Services.Multiplay.Authoring.Core.Assets.MultiplayConfig.BuildConfigurationDefinition Definition { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.BuildConfigurationName OriginalName { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.IResourceName ResourceName { get; }
+        public BuildConfigurationItem() {}
+    }
+
+    public class BuildItem : Unity.Services.DeploymentApi.Editor.DeploymentItem
+    {
+        public Unity.Services.Multiplay.Authoring.Core.Assets.MultiplayConfig.BuildDefinition Definition { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.BuildName OriginalName { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.IResourceName ResourceName { get; }
+        public BuildItem() {}
+    }
+
+    public class FleetItem : Unity.Services.DeploymentApi.Editor.DeploymentItem
+    {
+        public Unity.Services.Multiplay.Authoring.Core.Assets.MultiplayConfig.FleetDefinition Definition { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.FleetName OriginalName { get; set; }
+        public Unity.Services.Multiplay.Authoring.Core.Assets.IResourceName ResourceName { get; }
+        public FleetItem() {}
+    }
+}
+
+namespace Unity.Services.Multiplay.Authoring.Core.MultiplayApi
+{
+    public class ActionLog : System.IEquatable<ActionLog>
+    {
+        public long ActionID { get; set; }
+        public string Attachment { get; set; }
+        public System.DateTime Date { get; set; }
+        protected virtual System.Type EqualityContract { get; }
+        public long Id { get; set; }
+        public long MachineID { get; set; }
+        public string Message { get; set; }
+        public long ServerID { get; set; }
+        protected ActionLog(ActionLog original) {}
+        public ActionLog(long Id, long ServerID, long ActionID, long MachineID, string Message, System.DateTime Date, string Attachment = default(string)) {}
+        public virtual ActionLog <Clone>$();
+        public void Deconstruct(out long Id, out long ServerID, out long ActionID, out long MachineID, out string Message, out System.DateTime Date, out string Attachment);
+        public override bool Equals(object obj);
+        public virtual bool Equals(ActionLog other);
+        public override int GetHashCode();
+        public static bool operator ==(ActionLog left, ActionLog right);
+        public static bool operator !=(ActionLog left, ActionLog right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public class AllocationInformation : System.IEquatable<AllocationInformation>
+    {
+        public System.Guid AllocationId { get; set; }
+        public long BuildConfigurationId { get; set; }
+        protected virtual System.Type EqualityContract { get; }
+        public System.Guid FleetId { get; set; }
+        public long GamePort { get; set; }
+        public string Ipv4Address { get; set; }
+        public string Ipv6Address { get; set; }
+        public long MachineId { get; set; }
+        public System.Guid RegionId { get; set; }
+        public long ServerId { get; set; }
+        protected AllocationInformation(AllocationInformation original) {}
+        public AllocationInformation(System.Guid AllocationId, System.Guid FleetId, System.Guid RegionId, long BuildConfigurationId, long ServerId, long MachineId, string Ipv4Address, string Ipv6Address, long GamePort) {}
+        public virtual AllocationInformation <Clone>$();
+        public void Deconstruct(out System.Guid AllocationId, out System.Guid FleetId, out System.Guid RegionId, out long BuildConfigurationId, out long ServerId, out long MachineId, out string Ipv4Address, out string Ipv6Address, out long GamePort);
+        public override bool Equals(object obj);
+        public virtual bool Equals(AllocationInformation other);
+        public override int GetHashCode();
+        public static bool operator ==(AllocationInformation left, AllocationInformation right);
+        public static bool operator !=(AllocationInformation left, AllocationInformation right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public struct BuildConfigurationId
+    {
+        public long Id { get; set; }
+    }
+
+    public struct BuildId
+    {
+        public long Id { get; set; }
+    }
+
+    public struct FleetId
+    {
+        public System.Guid Guid { get; set; }
+    }
+
+    public class FleetInfo
+    {
+        public FleetInfo.AllocationStatus Allocation { get; }
+        public System.Collections.Generic.List<FleetInfo.BuildConfigInfo> BuildConfigInfos { get; }
+        public string FleetName { get; }
+        public FleetInfo.Status FleetStatus { get; }
+        public FleetId Id { get; }
+        public System.Collections.Generic.List<FleetInfo.FleetRegionInfo> Regions { get; }
+        public class AllocationStatus : System.IEquatable<FleetInfo.AllocationStatus>
+        {
+            public int Allocated { get; set; }
+            public int Available { get; set; }
+            protected virtual System.Type EqualityContract { get; }
+            public int Online { get; set; }
+            public int Total { get; set; }
+            protected AllocationStatus(FleetInfo.AllocationStatus original) {}
+            public AllocationStatus(int Total, int Allocated, int Available, int Online) {}
+            public virtual FleetInfo.AllocationStatus <Clone>$();
+            public void Deconstruct(out int Total, out int Allocated, out int Available, out int Online);
+            public override bool Equals(object obj);
+            public virtual bool Equals(FleetInfo.AllocationStatus other);
+            public override int GetHashCode();
+            public static bool operator ==(FleetInfo.AllocationStatus left, FleetInfo.AllocationStatus right);
+            public static bool operator !=(FleetInfo.AllocationStatus left, FleetInfo.AllocationStatus right);
+            protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+            public override string ToString();
+        }
+        public class BuildConfigInfo : System.IEquatable<FleetInfo.BuildConfigInfo>
+        {
+            protected virtual System.Type EqualityContract { get; }
+            public long Id { get; set; }
+            public string Name { get; set; }
+            protected BuildConfigInfo(FleetInfo.BuildConfigInfo original) {}
+            public BuildConfigInfo(long Id, string Name) {}
+            public virtual FleetInfo.BuildConfigInfo <Clone>$();
+            public void Deconstruct(out long Id, out string Name);
+            public override bool Equals(object obj);
+            public virtual bool Equals(FleetInfo.BuildConfigInfo other);
+            public override int GetHashCode();
+            public static bool operator ==(FleetInfo.BuildConfigInfo left, FleetInfo.BuildConfigInfo right);
+            public static bool operator !=(FleetInfo.BuildConfigInfo left, FleetInfo.BuildConfigInfo right);
+            protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+            public override string ToString();
+        }
+        public class FleetRegionInfo : System.IEquatable<FleetInfo.FleetRegionInfo>
+        {
+            protected virtual System.Type EqualityContract { get; }
+            public System.Guid Id { get; set; }
+            public string Name { get; set; }
+            public System.Guid RegionId { get; set; }
+            protected FleetRegionInfo(FleetInfo.FleetRegionInfo original) {}
+            public FleetRegionInfo(System.Guid Id, System.Guid RegionId, string Name) {}
+            public virtual FleetInfo.FleetRegionInfo <Clone>$();
+            public void Deconstruct(out System.Guid Id, out System.Guid RegionId, out string Name);
+            public override bool Equals(object obj);
+            public virtual bool Equals(FleetInfo.FleetRegionInfo other);
+            public override int GetHashCode();
+            public static bool operator ==(FleetInfo.FleetRegionInfo left, FleetInfo.FleetRegionInfo right);
+            public static bool operator !=(FleetInfo.FleetRegionInfo left, FleetInfo.FleetRegionInfo right);
+            protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+            public override string ToString();
+        }
+        public enum Status
+        {
+            Draining = 2,
+            Offline = 3,
+            Online = 1,
+        }
+    }
+
+    public interface IInitializable
+    {
+        public System.Threading.Tasks.Task InitAsync();
+    }
+
+    public interface ILogsApi : IInitializable
+    {
+        public System.Threading.Tasks.Task<LogSearchResult> SearchLogsAsync(LogSearchParams searchParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+    }
+
+    public interface IServersApi : IInitializable
+    {
+        public System.Threading.Tasks.Task<System.Collections.Generic.List<ActionLog>> GetServerActionLogsAsync(long serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<ServerInfo> GetServerAsync(long serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        public System.Threading.Tasks.Task<bool> TriggerServerActionAsync(long serverId, ServerAction action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+    }
+
+    public class LogEntry : System.IEquatable<LogEntry>
+    {
+        protected virtual System.Type EqualityContract { get; }
+        public string Message { get; set; }
+        public LogEntryMetadata MetaData { get; set; }
+        protected LogEntry(LogEntry original) {}
+        public LogEntry(string Message, LogEntryMetadata MetaData) {}
+        public virtual LogEntry <Clone>$();
+        public void Deconstruct(out string Message, out LogEntryMetadata MetaData);
+        public override bool Equals(object obj);
+        public virtual bool Equals(LogEntry other);
+        public override int GetHashCode();
+        public static bool operator ==(LogEntry left, LogEntry right);
+        public static bool operator !=(LogEntry left, LogEntry right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public class LogEntryMetadata : System.IEquatable<LogEntryMetadata>
+    {
+        protected virtual System.Type EqualityContract { get; }
+        public System.Guid FleetId { get; set; }
+        public string MessageId { get; set; }
+        public string ServerId { get; set; }
+        public string Source { get; set; }
+        public System.DateTime Timestamp { get; set; }
+        protected LogEntryMetadata(LogEntryMetadata original) {}
+        public LogEntryMetadata(System.Guid FleetId, string MessageId, string ServerId, string Source, System.DateTime Timestamp) {}
+        public virtual LogEntryMetadata <Clone>$();
+        public void Deconstruct(out System.Guid FleetId, out string MessageId, out string ServerId, out string Source, out System.DateTime Timestamp);
+        public override bool Equals(object obj);
+        public virtual bool Equals(LogEntryMetadata other);
+        public override int GetHashCode();
+        public static bool operator ==(LogEntryMetadata left, LogEntryMetadata right);
+        public static bool operator !=(LogEntryMetadata left, LogEntryMetadata right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public class LogSearchParams : System.IEquatable<LogSearchParams>
+    {
+        protected virtual System.Type EqualityContract { get; }
+        public System.Guid FleetId { get; set; }
+        public System.DateTime From { get; set; }
+        public string PaginationToken { get; set; }
+        public string Query { get; set; }
+        public long ServerId { get; set; }
+        public int Size { get; set; }
+        public System.DateTime To { get; set; }
+        protected LogSearchParams(LogSearchParams original) {}
+        public LogSearchParams(System.Guid FleetId, long ServerId, string Query, int Size, System.DateTime From, System.DateTime To, string PaginationToken = default(string)) {}
+        public virtual LogSearchParams <Clone>$();
+        public void Deconstruct(out System.Guid FleetId, out long ServerId, out string Query, out int Size, out System.DateTime From, out System.DateTime To, out string PaginationToken);
+        public override bool Equals(object obj);
+        public virtual bool Equals(LogSearchParams other);
+        public override int GetHashCode();
+        public static bool operator ==(LogSearchParams left, LogSearchParams right);
+        public static bool operator !=(LogSearchParams left, LogSearchParams right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public class LogSearchResult : System.IEquatable<LogSearchResult>
+    {
+        public System.Decimal Count { get; set; }
+        public System.Collections.Generic.List<LogEntry> Entries { get; set; }
+        protected virtual System.Type EqualityContract { get; }
+        public string PaginationToken { get; set; }
+        protected LogSearchResult(LogSearchResult original) {}
+        public LogSearchResult(System.Decimal Count, System.Collections.Generic.List<LogEntry> Entries, string PaginationToken) {}
+        public virtual LogSearchResult <Clone>$();
+        public void Deconstruct(out System.Decimal Count, out System.Collections.Generic.List<LogEntry> Entries, out string PaginationToken);
+        public override bool Equals(object obj);
+        public virtual bool Equals(LogSearchResult other);
+        public override int GetHashCode();
+        public static bool operator ==(LogSearchResult left, LogSearchResult right);
+        public static bool operator !=(LogSearchResult left, LogSearchResult right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public enum ServerAction
+    {
+        Add = 1,
+        Delete = 2,
+        Restart = 3,
+        Shutdown = 4,
+        Start = 5,
+        Stop = 6,
+    }
+
+    public class ServerInfo : System.IEquatable<ServerInfo>
+    {
+        public long BuildConfigurationID { get; set; }
+        public string BuildConfigurationName { get; set; }
+        public string BuildName { get; set; }
+        public long CpuLimit { get; set; }
+        public bool Deleted { get; set; }
+        protected virtual System.Type EqualityContract { get; }
+        public System.Guid FleetID { get; set; }
+        public string FleetName { get; set; }
+        public long HoldExpiresAt { get; set; }
+        public long Id { get; set; }
+        public string Ip { get; set; }
+        public long LocationID { get; set; }
+        public string LocationName { get; set; }
+        public long MachineID { get; set; }
+        public string MachineName { get; set; }
+        public long MemoryLimit { get; set; }
+        public int Port { get; set; }
+        public ServerStatus Status { get; set; }
+        protected ServerInfo(ServerInfo original) {}
+        public ServerInfo(long Id, long MachineID, string MachineName, long BuildConfigurationID, string BuildConfigurationName, string BuildName, System.Guid FleetID, string FleetName, long LocationID, string LocationName, string Ip, int Port, ServerStatus Status, long CpuLimit, long MemoryLimit, bool Deleted, long HoldExpiresAt = 0) {}
+        public virtual ServerInfo <Clone>$();
+        public void Deconstruct(out long Id, out long MachineID, out string MachineName, out long BuildConfigurationID, out string BuildConfigurationName, out string BuildName, out System.Guid FleetID, out string FleetName, out long LocationID, out string LocationName, out string Ip, out int Port, out ServerStatus Status, out long CpuLimit, out long MemoryLimit, out bool Deleted, out long HoldExpiresAt);
+        public override bool Equals(object obj);
+        public virtual bool Equals(ServerInfo other);
+        public override int GetHashCode();
+        public static bool operator ==(ServerInfo left, ServerInfo right);
+        public static bool operator !=(ServerInfo left, ServerInfo right);
+        protected virtual bool PrintMembers(System.Text.StringBuilder builder);
+        public override string ToString();
+    }
+
+    public enum ServerStatus
+    {
+        ALLOCATED = 1,
+        AVAILABLE = 3,
+        HELD = 6,
+        ONLINE = 4,
+        READY = 5,
+        RESERVED = 2,
+    }
+}

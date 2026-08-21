@@ -1,0 +1,9 @@
+@import url("../icons.uss");
+
+.idle #status-indicator{
+    background-image: var(--icon-idle-light);
+}
+
+#DriftIcon{
+    background-image: var(--icon-warning-inactive-light);
+}

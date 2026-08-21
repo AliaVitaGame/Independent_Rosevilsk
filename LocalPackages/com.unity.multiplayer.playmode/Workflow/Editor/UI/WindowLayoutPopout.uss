@@ -1,0 +1,19 @@
+#Container {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.popup_toggle {
+    max-width: 317px;
+    min-width: 317px;
+}
+
+.unity-toggle__label{
+    max-width: 105px;
+    min-width: 105px;
+}
+
+#unity-checkmark {
+    background-color: #2A2A2A;
+    border-radius: 2px;
+    border-color: #000000;
+}

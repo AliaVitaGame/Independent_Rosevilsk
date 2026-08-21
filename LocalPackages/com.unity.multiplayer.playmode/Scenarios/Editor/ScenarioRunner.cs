@@ -1,0 +1,178 @@
+using System.Diagnostics.CodeAnalysis;
+using Unity.Multiplayer.PlayMode.Scenarios.Editor.Api;
+using Unity.Multiplayer.PlayMode.Scenarios.Editor.GraphsFoundation;
+using UnityEditor;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Unity.Multiplayer.PlayMode.Common.Editor;
+using Unity.Multiplayer.PlayMode.Configurations.Editor;
+using UnityEditor.Callbacks;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace Unity.Multiplayer.PlayMode.Scenarios.Editor
+{
+    internal class ScenarioRunner : ScriptableSingleton<ScenarioRunner>
+    {
+        private static readonly ScenarioStatus k_DefaultScenarioState = new ScenarioStatus(ExecutionStage.None, ExecutionState.Invalid);
+
+        [InitializeOnLoadMethod]
+        private static void OnDomainReload()
+        {
+            // Hook up Unity Editor Exit callbacks to clean up Scenario's Instances.
+            EditorApplication.wantsToQuit += OnApplicationQuit;
+
+            // Listen for cases where the Play Mode Manager may flush its config, so that we stop the active scenario.
+            PlayModeManager.instance.ConfigAssetChanged += () =>
+            {
+                var playModeManager = PlayModeManager.instance;
+                var hasNoSecenarioConfig = playModeManager.ActivePlayModeConfig == null ||
+                                           playModeManager.ActivePlayModeConfig is not ScenarioConfig;
+                if (hasNoSecenarioConfig && instance.m_Scenario != null)
+                    LoadScenario(null);
+            };
+
+            // Lastly if the Assets themselves have been modified?
+            if (instance.m_Scenario == null)
+                return;
+
+            // Notify all Scenario mode instances running in a Scenario
+            if (instance.m_Scenario.Status.State == ScenarioState.Running)
+                instance.RunOrResume();
+
+            // Notify all Manual mode instances that are free running.
+            instance.m_Scenario.ResumeFreeRunInstances();
+        }
+
+        /// <summary>
+        /// Also track to asset changes (textures, meshes, prefabs) that occur in the Main Editor
+        /// to notify of Drift.
+        /// </summary>
+        private class ConfigAssetsTracker : AssetPostprocessor
+        {
+            public static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
+                string[] movedAssets, string[] movedFromAssetPaths)
+            {
+                var scenario = instance.m_Scenario;
+                if (scenario != null)
+                    scenario.NotifyDrift();
+            }
+        }
+
+        private Scenario m_Scenario;
+        private CancellationTokenSource m_CancellationTokenSource;
+        private bool m_IsRunning;
+
+        internal Scenario ActiveScenario => m_Scenario;
+        internal bool IsRunning => m_IsRunning;
+
+        internal static event Action<ScenarioStatus> StatusChanged;
+
+        public static void LoadScenario(Scenario scenario)
+        {
+            // If clearing the scenario, ensure all Free Run instances with this scenario are terminated
+            if (scenario == null && instance.m_Scenario != null)
+            {
+                instance.m_Scenario.TerminateAllFreeRunningInstancesAsync().Forget();
+
+                // If the Scenario is running, ensure it is stopped.
+                if (instance.IsRunning)
+                    StopScenario();
+            }
+            instance.m_Scenario = scenario;
+        }
+
+        private bool OnExitStopAllInstances()
+        {
+            // Stop all Scenario Instances if it is running.
+            if (m_IsRunning)
+                StopScenario();
+
+            // If no Free Running Instances are active, we are done - return true and resume Editor exit.
+            if (!instance.m_Scenario.HasActiveFreeRunInstance())
+                return true;
+
+            // Else, Stop all Active Free Running Instances as per usual (without "Force kill")
+            // Create the tasks to do so and run them async.
+            var freeRunStopTask = instance.m_Scenario.TerminateAllFreeRunningInstancesAsync();
+            var freeRunStopTimeoutTask = Task.Delay(5000);
+
+            Task.WhenAny(freeRunStopTask, freeRunStopTimeoutTask)
+                .ContinueWith((result) =>
+                {
+                    // If the timeout occurs, mark that as a failure and continue with Editor Exit.
+                    var taskId = result.Result.Id;
+                    var hasFailed = taskId == freeRunStopTimeoutTask.Id || !result.Result.IsCompletedSuccessfully;
+                    if (hasFailed)
+                        Debug.LogWarning("MPPM Scenario: Failed to terminate active free running instances " +
+                                         "- they may still be running!");
+                    EditorApplication.Exit(hasFailed ? -1 : 0);
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+
+            return false;
+        }
+
+        private static bool OnApplicationQuit()
+        {
+            if (instance.m_Scenario == null)
+                return true;
+
+            // Signal Instance cleanup
+            return instance.OnExitStopAllInstances();
+        }
+
+        public static void StartScenario()
+        {
+            if (instance.m_Scenario != null && instance.m_Scenario.Status.State == ScenarioState.Running)
+            {
+                instance.m_CancellationTokenSource?.Cancel();
+                instance.m_Scenario.StatusRefreshed -= OnStatusChanged;
+                instance.m_Scenario.Reset();
+                instance.m_IsRunning = false;
+
+                throw new InvalidOperationException("There is already a scenario running. Stopping it before starting a new one.");
+            }
+
+            instance.m_Scenario.Reset();
+            instance.RunOrResume();
+        }
+
+        private void RunOrResume()
+        {
+            instance.m_IsRunning = true;
+            m_CancellationTokenSource = new CancellationTokenSource();
+            instance.m_Scenario.StatusRefreshed += OnStatusChanged;
+            instance.m_Scenario.RunOrResumeAsync(m_CancellationTokenSource.Token).Forget();
+        }
+
+        private static void OnStatusChanged(ScenarioStatus status)
+        {
+            StatusChanged?.Invoke(status);
+        }
+
+        public static ScenarioStatus GetScenarioStatus()
+        {
+             return instance.m_IsRunning ? instance.m_Scenario.Status : k_DefaultScenarioState;
+        }
+
+        public static void StopScenario()
+        {
+            AssetMonitor.Reset();
+
+            if (instance.m_Scenario != null)
+            {
+                instance.m_CancellationTokenSource?.Cancel();
+
+                // We cannot guarantee that the scenario will be stopped as it depends on the nodes implementation.
+                // We assume they consume the cancellation token properly.
+                instance.m_CancellationTokenSource = null;
+                instance.m_IsRunning = false;
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("Trying to stop an scenario but there is currently no scenario running.");
+            }
+        }
+    }
+}
