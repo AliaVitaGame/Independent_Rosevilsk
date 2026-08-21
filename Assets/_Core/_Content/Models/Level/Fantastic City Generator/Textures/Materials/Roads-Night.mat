@@ -99,6 +99,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _Blend: 0
@@ -121,7 +122,7 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Shininess: 0.62
-    - _Smoothness: 0.254
+    - _Smoothness: 0
     - _SmoothnessSource: 1
     - _SmoothnessTextureChannel: 1
     - _SpecSource: 0
@@ -131,11 +132,12 @@ Material:
     - _Surface: 0
     - _UVSec: 0
     - _WorkflowMode: 1
+    - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 0.254}
-    - _Color: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 0.254}
+    - _BaseColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 0}
+    - _Color: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SpecColor: {r: 0.3773585, g: 0.3773585, b: 0.3773585, a: 1}
+    - _SpecColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
