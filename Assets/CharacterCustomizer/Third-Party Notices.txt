@@ -1,0 +1,2 @@
+Libre Gothic is licensed under the Open Font License https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL
+Roboto is licensed under Apache Version 2.0 https://www.apache.org/licenses/LICENSE-2.0
