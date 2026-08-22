@@ -3,6 +3,8 @@ using Game.Bootstrap.SceneManagement;
 using Game.Core.StateMachines;
 using Game.UI.MainMenu;
 using HEAVYART.TopDownShooter.Netcode;
+using Modules.SaveSystem;
+using Modules.SaveSystem.UI;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -11,12 +13,17 @@ namespace Game.Shared
     public sealed class MenuEntryPoint : IStartable, IDisposable
     {
         private readonly IStateMachine _stateMachine;
+        private readonly IGameSaveService _saveService;
+
         private MainMenuController _menuController;
+        private SaveSlotsPanelController _slotsPanel;
+        private SaveSlotsPanelMode _pendingMode;
         private bool _isLoading;
 
-        public MenuEntryPoint(IStateMachine stateMachine)
+        public MenuEntryPoint(IStateMachine stateMachine, IGameSaveService saveService)
         {
             _stateMachine = stateMachine;
+            _saveService = saveService;
         }
 
         public void Start()
@@ -35,63 +42,148 @@ namespace Game.Shared
                 return;
             }
 
+            EnsureSlotsPanel();
+
             _menuController.ContinueClicked += OnContinue;
             _menuController.NewGameClicked += OnNewGame;
             _menuController.LoadGameClicked += OnLoadGame;
             _menuController.NpcsClicked += OnNpcs;
             _menuController.SettingsClicked += OnSettings;
+
+            if (_slotsPanel != null)
+                _slotsPanel.SlotChosen += OnSlotChosen;
+
+            RefreshMenuSaveButtons();
         }
 
         public void Dispose()
         {
-            if (_menuController == null)
-                return;
+            if (_menuController != null)
+            {
+                _menuController.ContinueClicked -= OnContinue;
+                _menuController.NewGameClicked -= OnNewGame;
+                _menuController.LoadGameClicked -= OnLoadGame;
+                _menuController.NpcsClicked -= OnNpcs;
+                _menuController.SettingsClicked -= OnSettings;
+            }
 
-            _menuController.ContinueClicked -= OnContinue;
-            _menuController.NewGameClicked -= OnNewGame;
-            _menuController.LoadGameClicked -= OnLoadGame;
-            _menuController.NpcsClicked -= OnNpcs;
-            _menuController.SettingsClicked -= OnSettings;
+            if (_slotsPanel != null)
+                _slotsPanel.SlotChosen -= OnSlotChosen;
         }
 
-        private void OnContinue() => StartGame(offlineMode: true);
+        private void EnsureSlotsPanel()
+        {
+            _slotsPanel = UnityEngine.Object.FindFirstObjectByType<SaveSlotsPanelController>(FindObjectsInactive.Include);
+            if (_slotsPanel == null)
+            {
+                var canvas = _menuController.GetComponentInParent<Canvas>()
+                             ?? UnityEngine.Object.FindFirstObjectByType<Canvas>();
+                if (canvas == null)
+                {
+                    Debug.LogError("[MainMenu] No Canvas found for SaveSlotsPanel.");
+                    return;
+                }
 
-        private void OnNewGame() => StartGame(offlineMode: true);
+                var panelGo = new GameObject("SaveSlotsPanel", typeof(RectTransform));
+                panelGo.transform.SetParent(canvas.transform, false);
+                _slotsPanel = panelGo.AddComponent<SaveSlotsPanelController>();
+            }
+
+            _slotsPanel.Initialize(_saveService);
+        }
+
+        private void RefreshMenuSaveButtons()
+        {
+            var hasSaves = _saveService.HasAnySave();
+            // Continue only when a save exists. Load stays available to open the slots panel.
+            _menuController.SetContinueInteractable(hasSaves);
+            _menuController.SetLoadInteractable(true);
+        }
+
+        private void OnContinue()
+        {
+            if (!_saveService.TryBeginContinue(out _))
+            {
+                RefreshMenuSaveButtons();
+                Debug.LogWarning("[MainMenu] Continue: no save found.");
+                return;
+            }
+
+            StartGame();
+        }
+
+        private void OnNewGame()
+        {
+            if (_slotsPanel == null)
+            {
+                EnsureSlotsPanel();
+                if (_slotsPanel == null)
+                    return;
+            }
+
+            _pendingMode = SaveSlotsPanelMode.NewGame;
+            _slotsPanel.Show(SaveSlotsPanelMode.NewGame);
+        }
 
         private void OnLoadGame()
         {
-            // Save/load pipeline is not implemented yet — enter the game for now.
-            StartGame(offlineMode: true);
+            if (_slotsPanel == null)
+            {
+                EnsureSlotsPanel();
+                if (_slotsPanel == null)
+                    return;
+            }
+
+            // Always open the panel. Empty slots stay non-clickable inside Load mode.
+            _pendingMode = SaveSlotsPanelMode.LoadGame;
+            _slotsPanel.Show(SaveSlotsPanelMode.LoadGame);
+
+            if (!_saveService.HasAnySave())
+                Debug.Log("[MainMenu] Load Game: no occupied slots yet.");
         }
 
-        private void OnNpcs()
+        private void OnSlotChosen(int slotIndex)
         {
-            // Reserved for character / NPC gallery flow.
+            if (_pendingMode == SaveSlotsPanelMode.NewGame)
+                _saveService.BeginNewGame(slotIndex);
+            else
+            {
+                if (!_saveService.HasAnySave() || _saveService.GetSlot(slotIndex).isEmpty)
+                {
+                    Debug.LogWarning($"[MainMenu] Load Game: slot {slotIndex + 1} is empty.");
+                    return;
+                }
+
+                _saveService.BeginLoadGame(slotIndex);
+            }
+
+            StartGame();
         }
 
-        private void OnSettings()
-        {
-            // Visual settings popup is handled inside MainMenuController.
-        }
+        private void OnNpcs() { }
 
-        private async void StartGame(bool offlineMode)
+        private void OnSettings() { }
+
+        private async void StartGame()
         {
             if (_isLoading)
                 return;
 
             _isLoading = true;
             _menuController.SetInteractable(false);
+            _slotsPanel?.Hide();
 
             var lobbyManager = LobbyManager.Instance;
             if (lobbyManager == null)
             {
                 _isLoading = false;
                 _menuController.SetInteractable(true);
-                Debug.LogError($"{nameof(LobbyManager)} is missing. Start the project from the Bootstrap scene.");
+                RefreshMenuSaveButtons();
+                Debug.LogError($"{nameof(LobbyManager)} is missing. Start from Bootstrap.");
                 return;
             }
 
-            lobbyManager.isOfflineMode = offlineMode;
+            lobbyManager.isOfflineMode = true;
 
             try
             {
@@ -102,6 +194,7 @@ namespace Game.Shared
                 lobbyManager.isOfflineMode = false;
                 _isLoading = false;
                 _menuController.SetInteractable(true);
+                RefreshMenuSaveButtons();
                 Debug.LogException(exception);
             }
         }

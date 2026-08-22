@@ -43,6 +43,30 @@ namespace Game.Core.Passengers
 
         public event Action<int, int> BoardedCountChanged;
 
+        public void RestoreBoardedCount(int count)
+        {
+            _boardedCount = Mathf.Clamp(count, 0, MaxPassengers);
+            BoardedCountChanged?.Invoke(_boardedCount, MaxPassengers);
+
+            if (IsFull)
+            {
+                if (_activePassenger != null)
+                {
+                    _activePassenger.Boarded -= OnPassengerBoarded;
+                    Destroy(_activePassenger.gameObject);
+                    _activePassenger = null;
+                }
+
+                RefreshHintTarget();
+                return;
+            }
+
+            if (_activePassenger == null)
+                TrySpawnNextPassenger();
+
+            RefreshHintTarget();
+        }
+
         private void Awake()
         {
             if (_vehicle == null)

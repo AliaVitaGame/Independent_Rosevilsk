@@ -1,10 +1,11 @@
-using System;
 using Game.Bootstrap.SceneManagement;
 using Game.Core.StateMachines;
 using Game.Meta.Analytics;
 using Game.Meta.Lifecycle;
 using Modules.Audio;
 using Modules.Haptics;
+using Modules.SaveSystem;
+using Modules.SaveSystem.Services;
 using Modules.Settings;
 using Shared.Providers;
 using Shared.UI.Loading;
@@ -22,7 +23,7 @@ namespace Game.Shared
         [FormerlySerializedAs("loadingPanel")]
         [SerializeField] private LoadingPanelView loadingPanelPrefab;
         [SerializeField] private SettingsProvider settingsProvider;
-        
+
         protected override void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -35,10 +36,11 @@ namespace Game.Shared
             builder.RegisterComponentInNewPrefab(loadingPanelPrefab, Lifetime.Singleton)
                 .DontDestroyOnLoad()
                 .As<ILoadingPanelView>();
-            
+
             builder.Register<ICurrencyService, CurrencyService>(Lifetime.Singleton);
             builder.Register<IPlayerSaveService, NoOpPlayerSaveService>(Lifetime.Singleton);
-            
+            builder.Register<IGameSaveService, GameSaveService>(Lifetime.Singleton);
+
             builder.Register<ISceneCatalog, SceneCatalog>(Lifetime.Singleton);
             builder.Register<ISceneLoader, SceneLoaderService>(Lifetime.Singleton);
             builder.Register<ILoadingPanelService, LoadingPanelService>(Lifetime.Singleton);
@@ -58,7 +60,7 @@ namespace Game.Shared
             builder.Register<IHapticsService, NoOpHapticsService>(Lifetime.Singleton);
             builder.Register<IAnalyticsService, NoOpAnalyticsService>(Lifetime.Singleton);
             builder.Register<IServicePreloader, AnalyticsLifecycleReporter>(Lifetime.Singleton);
-            
+
             Debug.Log("ProjectInstaller configured");
         }
     }

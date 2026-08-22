@@ -1,20 +1,35 @@
+using System;
 using GameTest;
-using Shared.Providers;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
-using UnityEngine;
 
 namespace Game.Shared
 {
     public class GameInstaller : LifetimeScope
     {
+        protected override void Awake()
+        {
+            if (string.IsNullOrEmpty(parentReference.TypeName))
+                parentReference = ParentReference.Create<ProjectInstaller>();
+
+            base.Awake();
+        }
 
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<ICheatCodeRegistry, CheatCodeRegistry>(Lifetime.Singleton);
-            builder.Register<ICheatCodesRuntimeUi, CheatCodesCanvasBootstrapper>(Lifetime.Singleton);
+            // Required by GameEntryPoint (used in Editor/dev builds).
+            builder.Register<CheatCodeRegistry>(Lifetime.Scoped)
+                .As<ICheatCodeRegistry>()
+                .AsImplementedInterfaces()
+                .AsSelf();
+
+            builder.Register<CheatCodesCanvasBootstrapper>(Lifetime.Scoped)
+                .As<ICheatCodesRuntimeUi>()
+                .AsImplementedInterfaces()
+                .AsSelf();
+
             builder.RegisterEntryPoint<GameEntryPoint>();
-            Debug.Log("GameInstaller configured");
         }
     }
 }

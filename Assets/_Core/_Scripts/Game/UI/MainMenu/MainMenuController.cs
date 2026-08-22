@@ -32,10 +32,16 @@ namespace Game.UI.MainMenu
 
         private Button[] _menuButtons;
         private Button _selectedButton;
+        private bool _menuInteractable = true;
+        private bool _continueAllowed;
+        private bool _loadAllowed = true;
 
         private void Awake()
         {
+            EnsureEventSystem();
+            DisableLegacyMenuUi();
             AutoWireIfNeeded();
+
             _menuButtons = new[]
             {
                 continueButton,
@@ -56,7 +62,20 @@ namespace Game.UI.MainMenu
             if (discordButton != null)
                 discordButton.onClick.AddListener(OnDiscord);
 
-            SelectButton(continueButton);
+            // Continue stays off until MenuEntryPoint confirms a save exists.
+            SetContinueInteractable(false);
+            SetLoadInteractable(true);
+            SelectButton(newGameButton);
+        }
+
+        private void Start()
+        {
+            if (NewGameClicked == null)
+            {
+                Debug.LogError(
+                    "[MainMenu] MenuEntryPoint is not running. Start Play from Bootstrap scene " +
+                    "so MenuInstaller can wire New/Load/Continue.");
+            }
         }
 
         private void OnDestroy()
@@ -74,14 +93,40 @@ namespace Game.UI.MainMenu
 
         public void SetInteractable(bool interactable)
         {
-            foreach (var button in _menuButtons)
-            {
-                if (button != null)
-                    button.interactable = interactable;
-            }
+            _menuInteractable = interactable;
+            ApplyInteractableState();
+        }
 
+        public void SetContinueInteractable(bool interactable)
+        {
+            _continueAllowed = interactable;
+            if (continueButton != null)
+                continueButton.interactable = _menuInteractable && _continueAllowed;
+        }
+
+        public void SetLoadInteractable(bool interactable)
+        {
+            _loadAllowed = interactable;
+            if (loadGameButton != null)
+                loadGameButton.interactable = _menuInteractable && _loadAllowed;
+        }
+
+        private void ApplyInteractableState()
+        {
+            if (continueButton != null)
+                continueButton.interactable = _menuInteractable && _continueAllowed;
+            if (newGameButton != null)
+                newGameButton.interactable = _menuInteractable;
+            if (loadGameButton != null)
+                loadGameButton.interactable = _menuInteractable && _loadAllowed;
+            if (npcsButton != null)
+                npcsButton.interactable = _menuInteractable;
+            if (settingsButton != null)
+                settingsButton.interactable = _menuInteractable;
+            if (exitButton != null)
+                exitButton.interactable = _menuInteractable;
             if (discordButton != null)
-                discordButton.interactable = interactable;
+                discordButton.interactable = _menuInteractable;
         }
 
         private void AutoWireIfNeeded()
@@ -93,6 +138,13 @@ namespace Game.UI.MainMenu
             settingsButton ??= FindButton("SETTINGSButton");
             exitButton ??= FindButton("EXITButton");
             discordButton ??= FindButton("Discord") ?? EnsureDiscordButton();
+
+            EnsureButtonRaycast(continueButton);
+            EnsureButtonRaycast(newGameButton);
+            EnsureButtonRaycast(loadGameButton);
+            EnsureButtonRaycast(npcsButton);
+            EnsureButtonRaycast(settingsButton);
+            EnsureButtonRaycast(exitButton);
         }
 
         private static Button FindButton(string objectName)
@@ -105,6 +157,28 @@ namespace Game.UI.MainMenu
             }
 
             return null;
+        }
+
+        private static void EnsureButtonRaycast(Button button)
+        {
+            if (button == null)
+                return;
+
+            if (button.targetGraphic != null)
+            {
+                button.targetGraphic.raycastTarget = true;
+                return;
+            }
+
+            var image = button.GetComponent<Image>();
+            if (image == null)
+            {
+                image = button.gameObject.AddComponent<Image>();
+                image.color = new Color(1f, 1f, 1f, 0.001f);
+            }
+
+            image.raycastTarget = true;
+            button.targetGraphic = image;
         }
 
         private Button EnsureDiscordButton()
@@ -130,10 +204,33 @@ namespace Game.UI.MainMenu
             return button;
         }
 
+        private static void EnsureEventSystem()
+        {
+            var eventSystem = FindFirstObjectByType<EventSystem>();
+            if (eventSystem == null)
+            {
+                new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+                return;
+            }
+
+            if (eventSystem.GetComponent<BaseInputModule>() == null)
+                eventSystem.gameObject.AddComponent<StandaloneInputModule>();
+        }
+
+        private static void DisableLegacyMenuUi()
+        {
+            var legacy = GameObject.Find("MainMenuUI");
+            if (legacy != null && legacy.activeSelf)
+                legacy.SetActive(false);
+        }
+
         private void BindMenuButton(Button button, UnityEngine.Events.UnityAction handler)
         {
             if (button == null)
+            {
+                Debug.LogWarning("[MainMenu] Button reference is missing — check object names in the scene.");
                 return;
+            }
 
             button.onClick.AddListener(handler);
             EnsureHoverHandlers(button);
