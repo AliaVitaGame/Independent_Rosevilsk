@@ -1,19 +1,18 @@
 using System;
 using Game.Bootstrap.SceneManagement;
 using Game.Core.StateMachines;
+using Game.UI.MainMenu;
 using HEAVYART.TopDownShooter.Netcode;
 using UnityEngine;
-using UnityEngine.UI;
 using VContainer.Unity;
 
 namespace Game.Shared
 {
     public sealed class MenuEntryPoint : IStartable, IDisposable
     {
-        private const string StartButtonName = "StartButton";
-
         private readonly IStateMachine _stateMachine;
-        private Button _startButton;
+        private MainMenuController _menuController;
+        private bool _isLoading;
 
         public MenuEntryPoint(IStateMachine stateMachine)
         {
@@ -22,37 +21,77 @@ namespace Game.Shared
 
         public void Start()
         {
-            var buttons = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            _startButton = Array.Find(buttons, button => button.name == StartButtonName);
-
-            if (_startButton == null)
+            _menuController = UnityEngine.Object.FindFirstObjectByType<MainMenuController>(FindObjectsInactive.Include);
+            if (_menuController == null)
             {
-                Debug.LogError($"Menu button '{StartButtonName}' was not found.");
+                var canvas = GameObject.Find("Canvas");
+                if (canvas != null)
+                    _menuController = canvas.AddComponent<MainMenuController>();
+            }
+
+            if (_menuController == null)
+            {
+                Debug.LogError("MainMenuController was not found and could not be created.");
                 return;
             }
 
-            _startButton.onClick.AddListener(LoadGame);
+            _menuController.ContinueClicked += OnContinue;
+            _menuController.NewGameClicked += OnNewGame;
+            _menuController.LoadGameClicked += OnLoadGame;
+            _menuController.NpcsClicked += OnNpcs;
+            _menuController.SettingsClicked += OnSettings;
         }
 
         public void Dispose()
         {
-            if (_startButton != null)
-                _startButton.onClick.RemoveListener(LoadGame);
+            if (_menuController == null)
+                return;
+
+            _menuController.ContinueClicked -= OnContinue;
+            _menuController.NewGameClicked -= OnNewGame;
+            _menuController.LoadGameClicked -= OnLoadGame;
+            _menuController.NpcsClicked -= OnNpcs;
+            _menuController.SettingsClicked -= OnSettings;
         }
 
-        private async void LoadGame()
-        {
-            _startButton.interactable = false;
-            var lobbyManager = LobbyManager.Instance;
+        private void OnContinue() => StartGame(offlineMode: true);
 
+        private void OnNewGame() => StartGame(offlineMode: true);
+
+        private void OnLoadGame()
+        {
+            // Save/load pipeline is not implemented yet — enter the game for now.
+            StartGame(offlineMode: true);
+        }
+
+        private void OnNpcs()
+        {
+            // Reserved for character / NPC gallery flow.
+        }
+
+        private void OnSettings()
+        {
+            // Visual settings popup is handled inside MainMenuController.
+        }
+
+        private async void StartGame(bool offlineMode)
+        {
+            if (_isLoading)
+                return;
+
+            _isLoading = true;
+            _menuController.SetInteractable(false);
+
+            var lobbyManager = LobbyManager.Instance;
             if (lobbyManager == null)
             {
-                _startButton.interactable = true;
+                _isLoading = false;
+                _menuController.SetInteractable(true);
                 Debug.LogError($"{nameof(LobbyManager)} is missing. Start the project from the Bootstrap scene.");
                 return;
             }
 
-            lobbyManager.isOfflineMode = true;
+            lobbyManager.isOfflineMode = offlineMode;
 
             try
             {
@@ -61,7 +100,8 @@ namespace Game.Shared
             catch (Exception exception)
             {
                 lobbyManager.isOfflineMode = false;
-                _startButton.interactable = true;
+                _isLoading = false;
+                _menuController.SetInteractable(true);
                 Debug.LogException(exception);
             }
         }
