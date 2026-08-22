@@ -17,6 +17,7 @@ namespace Extensions
         private const int SetupVersion = 2;
         private const string SetupVersionKey = "SampleAV_SceneSetupVersion";
         private const string BootstrapScenePath = "Assets/_Core/Scenes/Bootstrap.unity";
+        private const string LoadingScenePath = "Assets/Plugins/HEAVYART/Top-Down Shooter Template (Netcode, Lobby, Relay)/Scenes/LoadingScene.unity";
         private const string MenuScenePath = "Assets/_Core/Scenes/MainMenu.unity";
         private const string GameScenePath = "Assets/_Core/Scenes/Game.unity";
         private const string LoadingPrefabPath = "Assets/_Core/Prefabs/UI/Shared/LoadingPanelCanvas.prefab";
@@ -62,6 +63,7 @@ namespace Extensions
             EditorBuildSettings.scenes = new[]
             {
                 CreateBuildScene(BootstrapScenePath),
+                CreateBuildScene(LoadingScenePath),
                 CreateBuildScene(MenuScenePath),
                 CreateBuildScene(GameScenePath)
             };
