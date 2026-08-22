@@ -17,7 +17,8 @@ namespace Game.Core.Passengers
         [Header("Spawn")]
         [SerializeField] private PassengerNpc _passengerPrefab;
         [SerializeField] private Transform[] _spawnPoints;
-        [SerializeField] private bool _autoCollectAiSpawnPoints = true;
+        [SerializeField] private Transform _npcSpawnRoot;
+        [SerializeField] private bool _autoCollectNpcSpawnPoints = true;
         [SerializeField] private float _groundRaycastHeight = 50f;
         [SerializeField] private float _groundRaycastDistance = 200f;
         [SerializeField] private LayerMask _groundMask = ~0;
@@ -104,15 +105,28 @@ namespace Game.Core.Passengers
                 }
             }
 
-            if (_spawnPointBuffer.Count > 0 || !_autoCollectAiSpawnPoints)
+            if (_spawnPointBuffer.Count > 0 || !_autoCollectNpcSpawnPoints)
                 return;
 
-            var aiRoot = GameObject.Find("AISpawnPoints");
-            if (aiRoot == null)
+            var npcRoot = _npcSpawnRoot;
+            if (npcRoot == null)
+                npcRoot = FindNpcSpawnRoot();
+
+            if (npcRoot == null)
                 return;
 
-            for (var i = 0; i < aiRoot.transform.childCount; i++)
-                _spawnPointBuffer.Add(aiRoot.transform.GetChild(i));
+            for (var i = 0; i < npcRoot.childCount; i++)
+                _spawnPointBuffer.Add(npcRoot.GetChild(i));
+        }
+
+        private static Transform FindNpcSpawnRoot()
+        {
+            var byPath = GameObject.Find("Points/NPC");
+            if (byPath != null)
+                return byPath.transform;
+
+            var byName = GameObject.Find("NPC");
+            return byName != null ? byName.transform : null;
         }
 
         private void TrySpawnNextPassenger()
@@ -122,7 +136,7 @@ namespace Game.Core.Passengers
 
             if (_spawnPointBuffer.Count == 0)
             {
-                Debug.LogWarning("[PassengerPickupSystem] No spawn points found.");
+                Debug.LogWarning("[PassengerPickupSystem] No NPC spawn points found.");
                 return;
             }
 
@@ -156,7 +170,6 @@ namespace Game.Core.Passengers
             if (Physics.Raycast(origin, Vector3.down, out var hit, _groundRaycastDistance, _groundMask, QueryTriggerInteraction.Ignore))
                 return hit.point;
 
-            // Fallback: keep XZ, drop to a safe near-ground Y.
             return new Vector3(position.x, 0f, position.z);
         }
 
