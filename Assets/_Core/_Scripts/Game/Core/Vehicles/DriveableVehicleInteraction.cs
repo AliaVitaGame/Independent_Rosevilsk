@@ -1,4 +1,5 @@
 using HEAVYART.TopDownShooter.Netcode;
+using Modules.TargetHints;
 using UnityEngine;
 
 namespace Game.Core.Vehicles
@@ -19,6 +20,7 @@ namespace Game.Core.Vehicles
         private Rigidbody _playerRigidbody;
         private Camera _mainCamera;
         private GameCameraController _gameCameraController;
+        private TargetHintTarget _targetHint;
         private Vector3 _cameraOffset;
         private Vector3 _cameraVelocity;
         private Quaternion _cameraRotation;
@@ -34,6 +36,7 @@ namespace Game.Core.Vehicles
         {
             _vehicleController = GetComponent<PrometeoCarController>();
             _vehicleRigidbody = GetComponent<Rigidbody>();
+            _targetHint = GetComponent<TargetHintTarget>();
 
             if (!TryGetComponent<VehicleImpactDamage>(out _))
                 gameObject.AddComponent<VehicleImpactDamage>();
@@ -96,6 +99,7 @@ namespace Game.Core.Vehicles
             _isDriving = true;
             _canEnter = false;
             _nextInputTime = Time.unscaledTime + InputCooldown;
+            _targetHint?.SetHintEnabled(false);
         }
 
         private void ExitVehicle()
@@ -118,6 +122,7 @@ namespace Game.Core.Vehicles
             _gameCameraController?.ActivateCameraMovement();
             _isDriving = false;
             _nextInputTime = Time.unscaledTime + InputCooldown;
+            _targetHint?.SetHintEnabled(true);
         }
 
         private void StopPlayerMovement()
