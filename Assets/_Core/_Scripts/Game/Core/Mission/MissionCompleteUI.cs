@@ -1,4 +1,6 @@
 using System;
+using Game.Core.Audio;
+using Modules.TargetHints;
 using PrimeTween;
 using TMPro;
 using UnityEngine;
@@ -14,11 +16,15 @@ namespace Game.Core.Mission
     {
         [SerializeField] private CanvasGroup _confirmGroup;
         [SerializeField] private CanvasGroup _endingGroup;
+        [SerializeField] private Image _endingDim;
+        [SerializeField] private CanvasGroup _endingTextGroup;
         [SerializeField] private TextMeshProUGUI _endingLabel;
         [SerializeField] private string _endingText = "Мы выбрались";
+        [SerializeField] private float _endingFadeDuration = 2.4f;
 
         private Tween _confirmTween;
         private Tween _endingTween;
+        private Tween _endingTextTween;
         private Action _onConfirm;
         private Action _onCancel;
         private CursorLockMode _savedCursorLock;
@@ -37,6 +43,7 @@ namespace Game.Core.Mission
         {
             _confirmTween.Stop();
             _endingTween.Stop();
+            _endingTextTween.Stop();
         }
 
         public void ShowConfirm(Action onConfirm, Action onCancel)
@@ -58,6 +65,7 @@ namespace Game.Core.Mission
             _confirmTween = Tween.Alpha(_confirmGroup, endValue: 1f, duration: 0.25f, ease: Ease.OutSine);
             _confirmGroup.blocksRaycasts = true;
             _confirmGroup.interactable = true;
+            GameSfx.PlayConfirm();
         }
 
         public void HideConfirm()
@@ -77,14 +85,31 @@ namespace Game.Core.Mission
             EnsureUi();
             HideConfirm();
             _endingGroup.gameObject.SetActive(true);
+            _endingGroup.alpha = 1f;
+            _endingGroup.transform.SetAsLastSibling();
             if (_endingLabel != null)
                 _endingLabel.text = _endingText;
 
+            if (_endingDim != null)
+            {
+                var dimColor = _endingDim.color;
+                dimColor.a = 0f;
+                _endingDim.color = dimColor;
+            }
+
+            if (_endingTextGroup != null)
+                _endingTextGroup.alpha = 0f;
+
             _endingTween.Stop();
-            _endingGroup.alpha = 0f;
-            _endingTween = Tween.Alpha(_endingGroup, endValue: 1f, duration: 1.4f, ease: Ease.InOutSine);
-            _endingGroup.blocksRaycasts = true;
+            _endingTextTween.Stop();
+            if (_endingDim != null)
+                _endingTween = Tween.Alpha(_endingDim, endValue: 1f, duration: _endingFadeDuration, ease: Ease.InSine);
+            if (_endingTextGroup != null)
+                _endingTextTween = Tween.Alpha(_endingTextGroup, endValue: 1f, duration: _endingFadeDuration, ease: Ease.OutSine);
+
+            _endingGroup.blocksRaycasts = false;
             _endingGroup.interactable = false;
+            BringHintArrowsToFront();
         }
 
         private void Update()
@@ -110,22 +135,34 @@ namespace Game.Core.Mission
 
             if (_endingGroup != null)
             {
-                _endingGroup.alpha = 0f;
+                _endingGroup.alpha = 1f;
                 _endingGroup.blocksRaycasts = false;
                 _endingGroup.interactable = false;
                 _endingGroup.gameObject.SetActive(false);
             }
+
+            if (_endingDim != null)
+            {
+                var dimColor = _endingDim.color;
+                dimColor.a = 0f;
+                _endingDim.color = dimColor;
+            }
+
+            if (_endingTextGroup != null)
+                _endingTextGroup.alpha = 0f;
         }
 
         private void OnYesClicked()
         {
             HideConfirm();
+            GameSfx.PlayConfirm();
             _onConfirm?.Invoke();
         }
 
         private void OnNoClicked()
         {
             HideConfirm();
+            GameSfx.PlayCancel();
             _onCancel?.Invoke();
         }
 
@@ -200,6 +237,17 @@ namespace Game.Core.Mission
             return null;
         }
 
+        private static void BringHintArrowsToFront()
+        {
+            var pool = FindFirstObjectByType<TargetHintArrowPool>(FindObjectsInactive.Include);
+            if (pool != null)
+                pool.transform.SetAsLastSibling();
+
+            var arrows = FindObjectsByType<TargetHintArrow>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 0; i < arrows.Length; i++)
+                arrows[i].transform.SetAsLastSibling();
+        }
+
         private CanvasGroup BuildConfirm(Transform parent)
         {
             var root = CreateFullScreen("MissionConfirm", parent, new Color(0f, 0f, 0f, 0.62f));
@@ -216,9 +264,26 @@ namespace Game.Core.Mission
 
         private CanvasGroup BuildEnding(Transform parent)
         {
-            var root = CreateFullScreen("MissionEnding", parent, new Color(0f, 0f, 0f, 0.88f));
+            var root = CreateFullScreen("MissionEnding", parent, new Color(0f, 0f, 0f, 1f));
             var group = root.gameObject.AddComponent<CanvasGroup>();
-            _endingLabel = CreateLabel("EndingText", root, _endingText, 52f, Vector2.zero, new Vector2(900f, 160f));
+            _endingDim = root.GetComponent<Image>();
+            if (_endingDim != null)
+            {
+                _endingDim.raycastTarget = false;
+                var color = _endingDim.color;
+                color.a = 0f;
+                _endingDim.color = color;
+            }
+
+            var textRoot = new GameObject("EndingTextRoot", typeof(RectTransform), typeof(CanvasGroup));
+            textRoot.transform.SetParent(root, false);
+            var textRt = (RectTransform)textRoot.transform;
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = Vector2.zero;
+            textRt.offsetMax = Vector2.zero;
+            _endingTextGroup = textRoot.GetComponent<CanvasGroup>();
+            _endingLabel = CreateLabel("EndingText", textRoot.transform, _endingText, 56f, new Vector2(0f, -40f), new Vector2(1100f, 160f));
             return group;
         }
 

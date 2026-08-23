@@ -1,3 +1,5 @@
+using Game.Core.Audio;
+using Game.Core.UI;
 using HEAVYART.TopDownShooter.Netcode;
 using Modules.TargetHints;
 using UnityEngine;
@@ -30,9 +32,10 @@ namespace Game.Core.Vehicles
         private bool _canEnter;
         private bool _inputLocked;
         private bool _cameraLocked;
-        private GUIStyle _promptStyle;
+        private ProjectMusicPlayer _radio;
 
         public bool IsDriving => _isDriving;
+        public bool CanEnter => _canEnter;
 
         private void Awake()
         {
@@ -42,6 +45,21 @@ namespace Game.Core.Vehicles
 
             if (!TryGetComponent<VehicleImpactDamage>(out _))
                 gameObject.AddComponent<VehicleImpactDamage>();
+
+            if (!TryGetComponent<VehicleHealth>(out _))
+                gameObject.AddComponent<VehicleHealth>();
+
+            if (!TryGetComponent<ProjectMusicPlayer>(out _radio))
+                _radio = gameObject.AddComponent<ProjectMusicPlayer>();
+
+            try
+            {
+                EnsurePrometeoSounds();
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogWarning($"[Vehicle] Could not restore car sounds: {exception.Message}");
+            }
 
             _vehicleController.enabled = false;
             _vehicleController.useTouchControls = false;
@@ -75,11 +93,18 @@ namespace Game.Core.Vehicles
             {
                 if (_isDriving)
                     StopVehicleInput();
+                _radio?.SetShouldPlay(false);
+                PlayEngine(false);
                 return;
             }
 
             if (_isDriving && _vehicleController != null)
                 _vehicleController.enabled = true;
+            if (_isDriving)
+            {
+                _radio?.SetShouldPlay(true);
+                PlayEngine(true);
+            }
         }
 
         public void SetCameraLocked(bool locked)
@@ -126,6 +151,9 @@ namespace Game.Core.Vehicles
             _canEnter = false;
             _nextInputTime = Time.unscaledTime + InputCooldown;
             _targetHint?.SetHintEnabled(false);
+            _radio?.SetShouldPlay(true);
+            PlayEngine(true);
+            GameSfx.PlayEnterVehicle();
         }
 
         private void ExitVehicle()
@@ -149,6 +177,9 @@ namespace Game.Core.Vehicles
             _isDriving = false;
             _nextInputTime = Time.unscaledTime + InputCooldown;
             _targetHint?.SetHintEnabled(true);
+            _radio?.SetShouldPlay(false);
+            PlayEngine(false);
+            GameSfx.PlayExitVehicle();
         }
 
         private void StopPlayerMovement()
@@ -171,6 +202,71 @@ namespace Game.Core.Vehicles
                 _vehicleRigidbody.angularVelocity = Vector3.zero;
         }
 
+        private void EnsurePrometeoSounds()
+        {
+            _vehicleController.useSounds = true;
+            _vehicleController.carEngineSound = EnsureSoundSource(
+                _vehicleController.carEngineSound,
+                "CarEngineSound",
+                GameplayUiStyle.LoadClip("Assets/Plugins/PROMETEO - Car Controller/Sounds/CarEngine.wav", "CarEngine"),
+                loop: true,
+                volume: 0.35f);
+            _vehicleController.tireScreechSound = EnsureSoundSource(
+                _vehicleController.tireScreechSound,
+                "TireScreechSound",
+                GameplayUiStyle.LoadClip("Assets/Plugins/PROMETEO - Car Controller/Sounds/TireScreech.wav", "TireScreech"),
+                loop: true,
+                volume: 0.28f);
+        }
+
+        private AudioSource EnsureSoundSource(AudioSource existing, string name, AudioClip clip, bool loop, float volume)
+        {
+            var source = existing;
+            if (source == null)
+            {
+                var child = transform.Find(name);
+                var go = child != null ? child.gameObject : null;
+                if (go == null)
+                {
+                    go = new GameObject(name);
+                    go.transform.SetParent(transform, false);
+                }
+
+                source = go.GetComponent<AudioSource>();
+                if (source == null)
+                    source = go.AddComponent<AudioSource>();
+            }
+
+            if (source == null)
+                return null;
+
+            if (clip != null)
+                source.clip = clip;
+
+            source.loop = loop;
+            source.playOnAwake = false;
+            source.spatialBlend = 0.35f;
+            source.volume = volume;
+            return source;
+        }
+
+        private void PlayEngine(bool play)
+        {
+            var engine = _vehicleController != null ? _vehicleController.carEngineSound : null;
+            var tires = _vehicleController != null ? _vehicleController.tireScreechSound : null;
+            if (play)
+            {
+                if (engine != null && engine.clip != null && !engine.isPlaying)
+                    engine.Play();
+                return;
+            }
+
+            if (engine != null && engine.isPlaying)
+                engine.Stop();
+            if (tires != null && tires.isPlaying)
+                tires.Stop();
+        }
+
         private static GameObject FindLocalPlayer()
         {
             var gameManager = GameManager.Instance;
@@ -179,23 +275,6 @@ namespace Game.Core.Vehicles
 
             var localPlayer = gameManager.userControl.localPlayer;
             return localPlayer != null ? localPlayer.gameObject : null;
-        }
-
-        private void OnGUI()
-        {
-            if (_inputLocked || (!_isDriving && !_canEnter))
-                return;
-
-            _promptStyle ??= new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 20,
-                normal = { textColor = Color.white }
-            };
-
-            var text = _isDriving ? "E — выйти из машины" : "E — сесть в машину";
-            var rect = new Rect((Screen.width - 320f) * 0.5f, Screen.height - 100f, 320f, 42f);
-            GUI.Label(rect, text, _promptStyle);
         }
     }
 }

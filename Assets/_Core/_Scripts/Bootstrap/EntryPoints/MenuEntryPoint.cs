@@ -1,6 +1,7 @@
 using System;
 using CC;
 using Game.Bootstrap.SceneManagement;
+using Game.Core.Audio;
 using Game.Core.StateMachines;
 using Game.UI.MainMenu;
 using HEAVYART.TopDownShooter.Netcode;
@@ -48,6 +49,7 @@ namespace Game.Shared
 
             EnsureSlotsPanel();
             EnsureCharacterCreator();
+            EnsureMenuMusic();
 
             _menuController.ContinueClicked += OnContinue;
             _menuController.NewGameClicked += OnNewGame;
@@ -249,6 +251,18 @@ namespace Game.Shared
         }
 
         private void OnNpcs() { }
+
+        private static void EnsureMenuMusic()
+        {
+            var host = GameObject.Find("MainMenuRoot");
+            if (host == null)
+                host = GameObject.Find("Canvas");
+            if (host == null)
+                return;
+
+            var player = host.GetComponent<ProjectMusicPlayer>() ?? host.AddComponent<ProjectMusicPlayer>();
+            player.SetShouldPlay(true);
+        }
 
         private void OnSettings() { }
 

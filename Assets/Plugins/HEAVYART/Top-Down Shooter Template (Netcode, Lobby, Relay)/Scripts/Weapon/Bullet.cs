@@ -91,7 +91,7 @@ namespace HEAVYART.TopDownShooter.Netcode
 
                 if (allowToHandleHit == true)
                 {
-                    CommandReceiver commandReceiver = hit.transform.GetComponent<CommandReceiver>();
+                    CommandReceiver commandReceiver = hit.collider.GetComponentInParent<CommandReceiver>();
 
                     //Check if object is able to receive modifiers
                     if (commandReceiver != null)
@@ -104,6 +104,26 @@ namespace HEAVYART.TopDownShooter.Netcode
                         StartCoroutine(RunBulletDestroy(hit.point));
 
                         isWaitingForDestroy = true;
+                    }
+                    else
+                    {
+                        var vehicleHit = hit.collider.GetComponentInParent<IBulletHitReceiver>();
+                        if (vehicleHit != null)
+                        {
+                            var damage = 0f;
+                            if (bulletParameters.modifiers != null)
+                            {
+                                for (int i = 0; i < bulletParameters.modifiers.Length; i++)
+                                {
+                                    if (bulletParameters.modifiers[i] is InstantDamage instantDamage)
+                                        damage += instantDamage.damage;
+                                }
+                            }
+
+                            vehicleHit.ReceiveBulletDamage(damage);
+                            StartCoroutine(RunBulletDestroy(hit.point));
+                            isWaitingForDestroy = true;
+                        }
                     }
                 }
             }

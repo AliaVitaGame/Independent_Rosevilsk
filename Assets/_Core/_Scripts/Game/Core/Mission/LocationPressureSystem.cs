@@ -24,6 +24,7 @@ namespace Game.Core.Mission
         private int _baseBotsCount;
         private float _baseSpawnRate;
         private bool _captured;
+        private bool _halted;
         private Coroutine _extraSpawnRoutine;
 
         public float DurationSeconds => _durationSeconds;
@@ -50,7 +51,8 @@ namespace Game.Core.Mission
                 _extraSpawnRoutine = null;
             }
 
-            RestoreBaselines();
+            if (!_halted)
+                RestoreBaselines();
         }
 
         private void OnDestroy()
@@ -58,7 +60,20 @@ namespace Game.Core.Mission
             if (Instance == this)
                 Instance = null;
 
-            RestoreBaselines();
+            if (!_halted)
+                RestoreBaselines();
+        }
+
+        public void Halt()
+        {
+            if (_halted)
+                return;
+
+            _halted = true;
+            if (SettingsManager.Instance != null && SettingsManager.Instance.gameplay != null)
+                SettingsManager.Instance.gameplay.botsCount = 0;
+
+            enabled = false;
         }
 
         private void Update()

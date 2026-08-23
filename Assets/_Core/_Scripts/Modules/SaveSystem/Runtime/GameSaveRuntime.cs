@@ -104,5 +104,13 @@ namespace Modules.SaveSystem.Runtime
             _quitSaved = true;
             _saveService.CaptureAndSaveActiveSlot();
         }
+
+        public void SaveNow()
+        {
+            if (_saveService == null || _saveService.ActiveSlotIndex < 0)
+                return;
+
+            _saveService.CaptureAndSaveActiveSlot();
+        }
     }
 }

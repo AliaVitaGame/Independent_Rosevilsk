@@ -82,6 +82,8 @@ namespace Game.Core.Passengers
             EnsurePressureSystems();
             EnsureRoadGuideLines();
             EnsureCityMap();
+            Game.Core.UI.GameplayHudController.Ensure();
+            Game.Core.Audio.CityAmbientPlayer.Ensure();
 
             if (_exitHint == null)
             {
@@ -243,6 +245,7 @@ namespace Game.Core.Passengers
 
             _boardedCount = Mathf.Min(_boardedCount + 1, MaxPassengers);
             BoardedCountChanged?.Invoke(_boardedCount, MaxPassengers);
+            Game.Core.Audio.GameSfx.PlayPassengerBoarded();
 
             Destroy(passenger.gameObject);
             RefreshHintTarget();

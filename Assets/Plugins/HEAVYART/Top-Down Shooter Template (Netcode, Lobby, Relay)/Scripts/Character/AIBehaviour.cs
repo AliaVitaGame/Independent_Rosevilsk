@@ -138,7 +138,7 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         private Transform FindNearestTarget()
         {
-            //List of targets (could be any other collection)
+            //List of targets (could be any collection)
             List<NetworkObject> targets = GameManager.Instance.userControl.allCharacters;
 
             Transform nearestTarget = null;
@@ -148,6 +148,7 @@ namespace HEAVYART.TopDownShooter.Netcode
             {
                 //Skip ourselves and null elements (just in case)
                 if (targets[i] == null || targets[i].transform == transform) continue;
+                if (!targets[i].gameObject.activeInHierarchy) continue;
 
                 //Distance to next character
                 float distance = (transform.position - targets[i].transform.position).magnitude;
@@ -157,6 +158,21 @@ namespace HEAVYART.TopDownShooter.Netcode
                 {
                     nearestTarget = targets[i].transform;
                     minDistance = distance;
+                }
+            }
+
+            var extraTargets = ExtraCombatTargets.All;
+            for (int i = 0; i < extraTargets.Count; i++)
+            {
+                var extra = extraTargets[i];
+                if (extra == null || !extra.IsValidTarget || extra.AimTransform == null)
+                    continue;
+
+                float vehicleDistance = (transform.position - extra.AimTransform.position).magnitude;
+                if (vehicleDistance < minDistance)
+                {
+                    nearestTarget = extra.AimTransform;
+                    minDistance = vehicleDistance;
                 }
             }
 

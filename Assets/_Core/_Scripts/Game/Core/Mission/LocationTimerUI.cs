@@ -72,5 +72,12 @@ namespace Game.Core.Mission
             _label.outlineColor = new Color(0f, 0f, 0f, 0.7f);
             _label.text = "00:00";
         }
+
+        public void HideForEnding()
+        {
+            enabled = false;
+            if (_label != null)
+                _label.gameObject.SetActive(false);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using Game.Core.Audio;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -273,6 +274,7 @@ namespace Game.UI.MainMenu
                 return;
 
             _selectedButton = button;
+            GameSfx.PlayHover();
 
             foreach (var menuButton in _menuButtons)
             {
@@ -306,18 +308,34 @@ namespace Game.UI.MainMenu
                 arrow.gameObject.SetActive(selected);
         }
 
-        private void OnContinue() => ContinueClicked?.Invoke();
-        private void OnNewGame() => NewGameClicked?.Invoke();
-        private void OnLoadGame() => LoadGameClicked?.Invoke();
+        private void OnContinue()
+        {
+            GameSfx.PlayClick();
+            ContinueClicked?.Invoke();
+        }
+
+        private void OnNewGame()
+        {
+            GameSfx.PlayClick();
+            NewGameClicked?.Invoke();
+        }
+
+        private void OnLoadGame()
+        {
+            GameSfx.PlayClick();
+            LoadGameClicked?.Invoke();
+        }
 
         private void OnNpcs()
         {
+            GameSfx.PlayClick();
             NpcsClicked?.Invoke();
             Debug.Log("[MainMenu] NPCS — экран персонажей пока не подключён.");
         }
 
         private void OnSettings()
         {
+            GameSfx.PlayClick();
             SettingsClicked?.Invoke();
 
             var managers = FindObjectsByType<HEAVYART.TopDownShooter.Netcode.MainMenuUIManager>(
@@ -362,6 +380,7 @@ namespace Game.UI.MainMenu
 
         private void OnExit()
         {
+            GameSfx.PlayClick();
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
