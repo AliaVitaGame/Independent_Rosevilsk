@@ -21,8 +21,11 @@ namespace Game.Core.Mission
         private Tween _endingTween;
         private Action _onConfirm;
         private Action _onCancel;
+        private CursorLockMode _savedCursorLock;
+        private bool _savedCursorVisible;
 
-        public bool IsConfirmVisible => _confirmGroup != null && _confirmGroup.alpha > 0.01f && _confirmGroup.blocksRaycasts;
+        public bool IsConfirmVisible =>
+            _confirmGroup != null && _confirmGroup.gameObject.activeSelf && _confirmGroup.blocksRaycasts;
 
         private void Awake()
         {
@@ -48,6 +51,9 @@ namespace Game.Core.Mission
             _endingGroup.gameObject.SetActive(false);
 
             _confirmGroup.gameObject.SetActive(true);
+            _confirmGroup.transform.SetAsLastSibling();
+            BindConfirmButtons();
+            SetCursorForUi(true);
             _confirmTween.Stop();
             _confirmTween = Tween.Alpha(_confirmGroup, endValue: 1f, duration: 0.25f, ease: Ease.OutSine);
             _confirmGroup.blocksRaycasts = true;
@@ -63,6 +69,7 @@ namespace Game.Core.Mission
             _confirmTween = Tween.Alpha(_confirmGroup, endValue: 0f, duration: 0.2f, ease: Ease.OutSine);
             _confirmGroup.blocksRaycasts = false;
             _confirmGroup.interactable = false;
+            SetCursorForUi(false);
         }
 
         public void PlayEndingOverlay()
@@ -78,6 +85,17 @@ namespace Game.Core.Mission
             _endingTween = Tween.Alpha(_endingGroup, endValue: 1f, duration: 1.4f, ease: Ease.InOutSine);
             _endingGroup.blocksRaycasts = true;
             _endingGroup.interactable = false;
+        }
+
+        private void Update()
+        {
+            if (!IsConfirmVisible)
+                return;
+
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Y))
+                OnYesClicked();
+            else if (Input.GetKeyDown(KeyCode.Escape))
+                OnNoClicked();
         }
 
         private void HideImmediate()
@@ -127,6 +145,59 @@ namespace Game.Core.Mission
 
             if (_endingGroup == null)
                 _endingGroup = BuildEnding(parent);
+
+            BindConfirmButtons();
+        }
+
+        private void BindConfirmButtons()
+        {
+            if (_confirmGroup == null)
+                return;
+
+            var yes = FindButton(_confirmGroup.transform, "YesButton");
+            var no = FindButton(_confirmGroup.transform, "NoButton");
+            if (yes != null)
+            {
+                yes.onClick.RemoveListener(OnYesClicked);
+                yes.onClick.AddListener(OnYesClicked);
+            }
+
+            if (no != null)
+            {
+                no.onClick.RemoveListener(OnNoClicked);
+                no.onClick.AddListener(OnNoClicked);
+            }
+        }
+
+        private void SetCursorForUi(bool uiActive)
+        {
+            if (uiActive)
+            {
+                _savedCursorLock = Cursor.lockState;
+                _savedCursorVisible = Cursor.visible;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                return;
+            }
+
+            Cursor.lockState = _savedCursorLock;
+            Cursor.visible = _savedCursorVisible;
+        }
+
+        private static Button FindButton(Transform root, string name)
+        {
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (var i = 0; i < transforms.Length; i++)
+            {
+                if (transforms[i].name != name)
+                    continue;
+
+                var button = transforms[i].GetComponent<Button>();
+                if (button != null)
+                    return button;
+            }
+
+            return null;
         }
 
         private CanvasGroup BuildConfirm(Transform parent)
@@ -138,10 +209,8 @@ namespace Game.Core.Mission
             CreateLabel("Title", panel, "Завершить побег?", 36f, new Vector2(0f, 70f), new Vector2(500f, 80f));
             CreateLabel("Body", panel, "Вы у выхода из города. Хотите завершить игру?", 22f, new Vector2(0f, 8f), new Vector2(500f, 70f));
 
-            var yes = CreateButton("YesButton", panel, "Да", new Vector2(-120f, -80f), new Color(0.18f, 0.62f, 0.28f, 1f));
-            var no = CreateButton("NoButton", panel, "Нет", new Vector2(120f, -80f), new Color(0.55f, 0.18f, 0.18f, 1f));
-            yes.onClick.AddListener(OnYesClicked);
-            no.onClick.AddListener(OnNoClicked);
+            CreateButton("YesButton", panel, "Да", new Vector2(-120f, -80f), new Color(0.18f, 0.62f, 0.28f, 1f));
+            CreateButton("NoButton", panel, "Нет", new Vector2(120f, -80f), new Color(0.55f, 0.18f, 0.18f, 1f));
             return group;
         }
 

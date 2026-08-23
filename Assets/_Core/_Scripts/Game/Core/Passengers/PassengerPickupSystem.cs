@@ -267,7 +267,7 @@ namespace Game.Core.Passengers
         {
             var isDriving = _vehicle != null && _vehicle.IsDriving;
             _vehicleHint?.SetHintEnabled(!isDriving);
-            _exitHint?.SetHintEnabled(_boardedCount > 0);
+            _exitHint?.SetHintEnabled(true);
 
             for (var i = 0; i < _waitingPassengers.Count; i++)
             {

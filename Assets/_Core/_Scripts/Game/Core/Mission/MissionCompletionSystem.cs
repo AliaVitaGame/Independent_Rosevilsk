@@ -1,4 +1,3 @@
-using Game.Core.Passengers;
 using Game.Core.Vehicles;
 using Modules.TargetHints;
 using PrimeTween;
@@ -7,21 +6,20 @@ using UnityEngine;
 namespace Game.Core.Mission
 {
     /// <summary>
-    /// Completes the escape when the player drives a full vehicle to ExitPoint.
+    /// Completes the escape when the player's vehicle is close to ExitPoint.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MissionCompletionSystem : MonoBehaviour
     {
         [Header("Bindings")]
         [SerializeField] private Transform _exitPoint;
-        [SerializeField] private PassengerPickupSystem _pickupSystem;
         [SerializeField] private DriveableVehicleInteraction _vehicle;
         [SerializeField] private MissionCompleteUI _ui;
         [SerializeField] private TargetHintTarget _exitHint;
         [SerializeField] private Camera _cinematicCamera;
 
         [Header("Arrival")]
-        [SerializeField] private float _arrivalRadius = 22f;
+        [SerializeField] private float _arrivalRadius = 45f;
         [SerializeField] private float _repromptCooldown = 4f;
 
         [Header("Cinematic")]
@@ -45,9 +43,6 @@ namespace Game.Core.Mission
                 if (exitGo != null)
                     _exitPoint = exitGo.transform;
             }
-
-            if (_pickupSystem == null)
-                _pickupSystem = FindFirstObjectByType<PassengerPickupSystem>();
 
             if (_vehicle == null)
                 _vehicle = FindFirstObjectByType<DriveableVehicleInteraction>();
@@ -79,17 +74,14 @@ namespace Game.Core.Mission
 
         private void Update()
         {
-            if (_completed || _promptOpen || _exitPoint == null || _vehicle == null || _pickupSystem == null)
+            if (_completed || _promptOpen)
                 return;
 
-            if (!_vehicle.IsDriving || !_pickupSystem.IsFull)
-            {
-                _insideZone = false;
+            ResolveBindings();
+            if (_exitPoint == null || _vehicle == null)
                 return;
-            }
 
-            var distance = Vector3.Distance(_vehicle.transform.position, _exitPoint.position);
-            var inZone = distance <= _arrivalRadius;
+            var inZone = PlanarDistance(_vehicle.transform.position, _exitPoint.position) <= _arrivalRadius;
             if (!inZone)
             {
                 _insideZone = false;
@@ -103,11 +95,26 @@ namespace Game.Core.Mission
             OpenPrompt();
         }
 
+        private void ResolveBindings()
+        {
+            if (_exitPoint == null)
+            {
+                var exitGo = GameObject.Find("ExitPoint");
+                if (exitGo != null)
+                    _exitPoint = exitGo.transform;
+            }
+
+            if (_vehicle == null)
+                _vehicle = FindFirstObjectByType<DriveableVehicleInteraction>();
+        }
+
         private void OpenPrompt()
         {
             _promptOpen = true;
             _vehicle.SetGameplayLocked(true);
-            _ui.ShowConfirm(OnConfirmEscape, OnCancelEscape);
+            if (_ui == null)
+                _ui = FindFirstObjectByType<MissionCompleteUI>(FindObjectsInactive.Include);
+            _ui?.ShowConfirm(OnConfirmEscape, OnCancelEscape);
         }
 
         private void OnCancelEscape()
@@ -157,6 +164,13 @@ namespace Game.Core.Mission
 
             var fadeDelay = Mathf.Max(0.2f, _segmentCount * _segmentDuration - 1.6f);
             Tween.Delay(fadeDelay).OnComplete(() => _ui.PlayEndingOverlay());
+        }
+
+        private static float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
         }
 
         private static Canvas FindGameplayCanvas()

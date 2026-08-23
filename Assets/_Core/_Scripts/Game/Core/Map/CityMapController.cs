@@ -1,3 +1,4 @@
+using Game.Core.Mission;
 using Game.Core.Vehicles;
 using HEAVYART.TopDownShooter.Netcode;
 using Modules.TargetHints;
@@ -29,6 +30,7 @@ namespace Game.Core.Map
         private RectTransform _playerMarker;
         private readonly System.Collections.Generic.List<RectTransform> _targetMarkers = new();
         private DriveableVehicleInteraction _vehicle;
+        private MissionCompleteUI _missionUi;
         private GameCameraController _gameCamera;
         private Transform _player;
         private bool _isOpen;
@@ -44,6 +46,7 @@ namespace Game.Core.Map
         private void Awake()
         {
             _vehicle = FindFirstObjectByType<DriveableVehicleInteraction>();
+            _missionUi = FindFirstObjectByType<MissionCompleteUI>(FindObjectsInactive.Include);
             EnsureCamera();
             EnsureOverlay();
             SetOpen(false, true);
@@ -57,6 +60,11 @@ namespace Game.Core.Map
 
         private void Update()
         {
+            if (_missionUi == null)
+                _missionUi = FindFirstObjectByType<MissionCompleteUI>(FindObjectsInactive.Include);
+            if (_missionUi != null && _missionUi.IsConfirmVisible)
+                return;
+
             if (Input.GetKeyDown(_toggleKeyA) || Input.GetKeyDown(_toggleKeyB))
                 SetOpen(!_isOpen, false);
 
