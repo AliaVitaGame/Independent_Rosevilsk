@@ -119,32 +119,33 @@ namespace HEAVYART.TopDownShooter.Netcode
 
             var lookFlat = FlattenHorizontal(lineOfSightTransform.forward);
 
-            if (movementSpeed > 0.01f) // If character moves
+            if (movementSpeed > 0.01f)
             {
                 bool isOppositeDirections = Vector3.Dot(movementDirection, lookFlat) < 0;
-
-                //Set movement direction
                 animator.SetFloat("Movement", isOppositeDirections ? -1 : 1);
 
-                targetRotation = Quaternion.LookRotation(movementDirection);
-
-                //Rotate body in direction of aiming (a little bit). Fixes Quaternion.Slerp rotation in wrong direction.
-
-                //Calculate additional angle (if character moves forward)
-                float additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, lookFlat).eulerAngles.y);
-
-                if (isOppositeDirections)
+                if (continuousLookYaw)
                 {
-                    //Calculate additional angle if character moves backwards
-                    targetRotation *= Quaternion.Euler(0, -180, 0);
-                    additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, -lookFlat).eulerAngles.y);
+                    // Keep aim on the cursor; walk cycle uses Movement, not body yaw.
+                    targetRotation = Quaternion.LookRotation(lookFlat);
                 }
+                else
+                {
+                    targetRotation = Quaternion.LookRotation(movementDirection);
 
-                //Apply additional rotation
-                float lineOfSightRotationFactor = continuousLookYaw ? 0.35f : 0.1f;
-                targetRotation *= Quaternion.Euler(0, additionalLineOfSightAngle * lineOfSightRotationFactor, 0);
+                    float additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, lookFlat).eulerAngles.y);
+
+                    if (isOppositeDirections)
+                    {
+                        targetRotation *= Quaternion.Euler(0, -180, 0);
+                        additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, -lookFlat).eulerAngles.y);
+                    }
+
+                    const float lineOfSightRotationFactor = 0.1f;
+                    targetRotation *= Quaternion.Euler(0, additionalLineOfSightAngle * lineOfSightRotationFactor, 0);
+                }
             }
-            else // If it stands
+            else
             {
                 targetRotation = continuousLookYaw
                     ? Quaternion.LookRotation(lookFlat)
