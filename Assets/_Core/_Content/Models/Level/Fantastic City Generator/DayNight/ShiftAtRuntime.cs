@@ -17,7 +17,7 @@ public class ShiftAtRuntime : MonoBehaviour
     {
 
 
-        if (Input.GetKeyDown(KeyCode.N))
+        if (Input.GetKeyDown(KeyCode.F9))
         {
             if (dayNight)
             {

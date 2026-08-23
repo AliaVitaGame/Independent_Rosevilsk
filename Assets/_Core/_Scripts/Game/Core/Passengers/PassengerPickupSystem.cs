@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Core.Map;
 using Game.Core.Mission;
 using Game.Core.Vehicles;
 using Modules.TargetHints;
@@ -79,6 +80,8 @@ namespace Game.Core.Passengers
 
             EnsureHintArrowPool();
             EnsurePressureSystems();
+            EnsureRoadGuideLines();
+            EnsureCityMap();
 
             if (_exitHint == null)
             {
@@ -300,6 +303,24 @@ namespace Game.Core.Passengers
             var host = canvas != null ? canvas : gameObject;
             if (host.GetComponent<LocationTimerUI>() == null)
                 host.AddComponent<LocationTimerUI>();
+        }
+
+        private void EnsureRoadGuideLines()
+        {
+            if (FindFirstObjectByType<RoadGuideLineSystem>(FindObjectsInactive.Include) != null)
+                return;
+
+            var host = new GameObject("RoadGuideLines");
+            host.AddComponent<RoadGuideLineSystem>();
+        }
+
+        private void EnsureCityMap()
+        {
+            if (FindFirstObjectByType<CityMapController>(FindObjectsInactive.Include) != null)
+                return;
+
+            var host = new GameObject("CityMap");
+            host.AddComponent<CityMapController>();
         }
 
         private bool IsVehicleSlowEnough(Transform vehicleTransform)
