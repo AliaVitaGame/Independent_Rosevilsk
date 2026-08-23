@@ -28,6 +28,8 @@ namespace Game.Core.Vehicles
         private float _nextInputTime;
         private bool _isDriving;
         private bool _canEnter;
+        private bool _inputLocked;
+        private bool _cameraLocked;
         private GUIStyle _promptStyle;
 
         public bool IsDriving => _isDriving;
@@ -47,6 +49,9 @@ namespace Game.Core.Vehicles
 
         private void Update()
         {
+            if (_inputLocked)
+                return;
+
             if (_isDriving)
             {
                 if (Time.unscaledTime >= _nextInputTime && Input.GetKeyDown(KeyCode.E))
@@ -63,9 +68,30 @@ namespace Game.Core.Vehicles
                 EnterVehicle();
         }
 
+        public void SetGameplayLocked(bool locked)
+        {
+            _inputLocked = locked;
+            if (locked)
+            {
+                if (_isDriving)
+                    StopVehicleInput();
+                return;
+            }
+
+            if (_isDriving && _vehicleController != null)
+                _vehicleController.enabled = true;
+        }
+
+        public void SetCameraLocked(bool locked)
+        {
+            _cameraLocked = locked;
+            if (locked)
+                _gameCameraController?.StopCameraMovement();
+        }
+
         private void LateUpdate()
         {
-            if (!_isDriving || _mainCamera == null)
+            if (_cameraLocked || !_isDriving || _mainCamera == null)
                 return;
 
             var targetPosition = transform.position + _cameraOffset;
@@ -157,7 +183,7 @@ namespace Game.Core.Vehicles
 
         private void OnGUI()
         {
-            if (!_isDriving && !_canEnter)
+            if (_inputLocked || (!_isDriving && !_canEnter))
                 return;
 
             _promptStyle ??= new GUIStyle(GUI.skin.box)

@@ -43,6 +43,8 @@ namespace Game.Core.Passengers
             if (_hintTarget == null)
                 _hintTarget = GetComponent<TargetHintTarget>();
 
+            _hintTarget?.SetKind(TargetHintKind.Passenger);
+
             if (_animator == null)
                 _animator = GetComponentInChildren<Animator>();
 

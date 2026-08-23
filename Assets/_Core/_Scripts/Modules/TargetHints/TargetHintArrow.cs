@@ -1,5 +1,6 @@
 using PrimeTween;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Modules.TargetHints
 {
@@ -35,11 +36,22 @@ namespace Modules.TargetHints
         [SerializeField] private float _worldVisibleDuration = 5f;
         [SerializeField] private float _fadeDuration = 0.45f;
 
+        [Header("Kind Visuals")]
+        [SerializeField] private Image _arrowImage;
+        [SerializeField] private Image _iconImage;
+        [SerializeField] private Color _vehicleColor = new(1f, 0.82f, 0.18f, 0.9f);
+        [SerializeField] private Color _passengerColor = new(1f, 0.15f, 0.12f, 0.9f);
+        [SerializeField] private Color _exitColor = new(0.2f, 0.92f, 0.42f, 0.9f);
+
         private Canvas _parentCanvas;
         private Camera _uiCamera;
         private HintMode _mode = HintMode.Hidden;
+        private TargetHintKind _appliedKind = (TargetHintKind)(-1);
         private Tween _alphaTween;
         private Sequence _worldFadeSequence;
+        private Sprite _vehicleIcon;
+        private Sprite _passengerIcon;
+        private Sprite _exitIcon;
 
         public TargetHintTarget Target => _target;
 
@@ -52,6 +64,7 @@ namespace Modules.TargetHints
                 _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
 
             _parentCanvas = GetComponentInParent<Canvas>();
+            EnsureVisualBindings();
             ResolveCameras();
             SetAlphaImmediate(0f);
         }
@@ -79,6 +92,8 @@ namespace Modules.TargetHints
 
             if (isActiveAndEnabled && _target != null)
                 _target.HintEnabledChanged += OnHintEnabledChanged;
+
+            ApplyKindVisuals(true);
         }
 
         private void LateUpdate()
@@ -124,6 +139,8 @@ namespace Modules.TargetHints
 
             _arrowRect.anchoredPosition = localPoint;
             _arrowRect.localRotation = Quaternion.Euler(0f, 0f, _worldArrowRotationZ);
+            KeepIconUpright();
+            ApplyKindVisuals(false);
         }
 
         private void ApplyScreenEdge(Vector3 viewport, bool inFront)
@@ -160,6 +177,8 @@ namespace Modules.TargetHints
             // Sprite points up (local +Y). Rotate so tip faces the off-screen target.
             var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
             _arrowRect.localRotation = Quaternion.Euler(0f, 0f, angle);
+            KeepIconUpright();
+            ApplyKindVisuals(false);
         }
 
         private bool TryScreenToCanvas(Vector2 screenPoint, out Vector2 localPoint)
@@ -271,6 +290,79 @@ namespace Modules.TargetHints
         {
             if (_target == null || !_target.IsHintEnabled)
                 SetMode(HintMode.Hidden);
+        }
+
+        private void KeepIconUpright()
+        {
+            if (_iconImage == null)
+                return;
+
+            _iconImage.rectTransform.localRotation = Quaternion.Inverse(_arrowRect.localRotation);
+        }
+
+        private void ApplyKindVisuals(bool force)
+        {
+            if (_target == null)
+                return;
+
+            var kind = _target.Kind;
+            if (!force && kind == _appliedKind)
+                return;
+
+            _appliedKind = kind;
+            if (_arrowImage != null)
+                _arrowImage.color = GetColor(kind);
+
+            if (_iconImage != null)
+            {
+                _iconImage.sprite = GetIcon(kind);
+                _iconImage.enabled = _iconImage.sprite != null;
+                _iconImage.color = Color.white;
+            }
+        }
+
+        private Color GetColor(TargetHintKind kind)
+        {
+            return kind switch
+            {
+                TargetHintKind.Vehicle => _vehicleColor,
+                TargetHintKind.Exit => _exitColor,
+                _ => _passengerColor
+            };
+        }
+
+        private Sprite GetIcon(TargetHintKind kind)
+        {
+            switch (kind)
+            {
+                case TargetHintKind.Vehicle:
+                    return _vehicleIcon ??= TargetHintIconFactory.Create(TargetHintKind.Vehicle);
+                case TargetHintKind.Exit:
+                    return _exitIcon ??= TargetHintIconFactory.Create(TargetHintKind.Exit);
+                default:
+                    return _passengerIcon ??= TargetHintIconFactory.Create(TargetHintKind.Passenger);
+            }
+        }
+
+        private void EnsureVisualBindings()
+        {
+            if (_arrowImage == null)
+                _arrowImage = GetComponentInChildren<Image>(true);
+
+            if (_iconImage != null)
+                return;
+
+            var iconGo = new GameObject("HintIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            iconGo.transform.SetParent(_arrowRect, false);
+            var iconRect = (RectTransform)iconGo.transform;
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.sizeDelta = new Vector2(28f, 28f);
+            iconRect.anchoredPosition = Vector2.zero;
+            _iconImage = iconGo.GetComponent<Image>();
+            _iconImage.raycastTarget = false;
+            _iconImage.preserveAspect = true;
         }
     }
 }

@@ -14,11 +14,13 @@ namespace Modules.TargetHints
 
         [SerializeField] private Vector3 _worldOffset = new(0f, 2f, 0f);
         [SerializeField] private bool _isHintEnabled = true;
+        [SerializeField] private TargetHintKind _kind = TargetHintKind.Passenger;
 
         public static IReadOnlyList<TargetHintTarget> All => ActiveTargets;
 
         public Vector3 WorldPosition => transform.position + _worldOffset;
         public bool IsHintEnabled => _isHintEnabled && isActiveAndEnabled;
+        public TargetHintKind Kind => _kind;
 
         public event Action<TargetHintTarget> HintEnabledChanged;
 
@@ -31,6 +33,11 @@ namespace Modules.TargetHints
         private void OnDisable()
         {
             ActiveTargets.Remove(this);
+        }
+
+        public void SetKind(TargetHintKind kind)
+        {
+            _kind = kind;
         }
 
         public void SetHintEnabled(bool enabled)
