@@ -107,6 +107,7 @@ namespace HEAVYART.TopDownShooter.Netcode
 
             Transform instantiatedBullet = Instantiate(weaponConfig.bulletPrefab, weaponModelTransformKeeper.firePointTransform.position, gunDirectionTransforms[gunIndex].rotation);
             instantiatedBullet.GetComponent<Bullet>().Initialize(bulletParameters, weaponModelTransformKeeper.firePointTransform, weaponConfig.muzzleFlashPrefab);
+            ExtraCombatTargets.NotifyWeaponFired(weaponModelTransformKeeper.firePointTransform.position);
         }
 
         public void ShowWeapon()

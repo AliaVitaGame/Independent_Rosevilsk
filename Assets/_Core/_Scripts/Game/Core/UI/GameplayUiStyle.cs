@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Game.Core.Audio;
 using TMPro;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -66,27 +68,41 @@ namespace Game.Core.UI
             return LoadAsset<Sprite>(path, null);
         }
 
+        private static readonly Dictionary<string, Object> Cache = new();
+
         private static T LoadAsset<T>(string path, string fallbackName) where T : Object
         {
-#if UNITY_EDITOR
-            var fromPath = AssetDatabase.LoadAssetAtPath<T>(path);
-            if (fromPath != null)
-                return fromPath;
-#endif
+            var cacheKey = typeof(T).FullName + "|" + path + "|" + (fallbackName ?? string.Empty);
+            if (Cache.TryGetValue(cacheKey, out var cached) && cached != null)
+                return (T)cached;
+
             if (string.IsNullOrEmpty(fallbackName))
+                fallbackName = System.IO.Path.GetFileNameWithoutExtension(path);
+
+            T loaded = null;
+#if UNITY_EDITOR
+            loaded = AssetDatabase.LoadAssetAtPath<T>(path);
+#endif
+            if (loaded == null && typeof(T) == typeof(AudioClip))
+                loaded = RuntimeAudioCatalog.FindClip(fallbackName) as T;
+
+            if (loaded == null)
             {
-                var fileName = System.IO.Path.GetFileNameWithoutExtension(path);
-                fallbackName = fileName;
+                var existing = Resources.FindObjectsOfTypeAll<T>();
+                for (var i = 0; i < existing.Length; i++)
+                {
+                    if (existing[i] != null && existing[i].name == fallbackName)
+                    {
+                        loaded = existing[i];
+                        break;
+                    }
+                }
             }
 
-            var loaded = Resources.FindObjectsOfTypeAll<T>();
-            for (var i = 0; i < loaded.Length; i++)
-            {
-                if (loaded[i] != null && loaded[i].name == fallbackName)
-                    return loaded[i];
-            }
+            if (loaded != null)
+                Cache[cacheKey] = loaded;
 
-            return null;
+            return loaded;
         }
     }
 }

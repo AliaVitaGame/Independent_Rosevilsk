@@ -11,8 +11,17 @@ namespace Game.Core.Audio
         [SerializeField] private AudioClip _clip;
         [SerializeField] [Range(0f, 1f)] private float _volume = 0.55f;
         [SerializeField] private float _fadeDuration = 0.7f;
+        [SerializeField] private bool _spatial;
+        [SerializeField] private float _minDistance = 18f;
+        [SerializeField] private float _maxDistance = 55f;
 
         public float TargetVolume => _volume;
+
+        public void ConfigureAsVehicleRadio()
+        {
+            _spatial = true;
+            EnsureSource();
+        }
 
         private AudioSource _source;
         private Tween _fadeTween;
@@ -49,7 +58,14 @@ namespace Game.Core.Audio
             _source.clip = _clip;
             _source.loop = true;
             _source.playOnAwake = false;
-            _source.spatialBlend = 0f;
+            _source.dopplerLevel = 0f;
+            _source.spatialBlend = _spatial ? 1f : 0f;
+            if (_spatial)
+            {
+                _source.rolloffMode = AudioRolloffMode.Linear;
+                _source.minDistance = _minDistance;
+                _source.maxDistance = _maxDistance;
+            }
             if (_clip != null && !_source.isPlaying)
             {
                 _source.volume = 0f;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,6 +17,8 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         public static IReadOnlyList<IBulletHitReceiver> All => Targets;
 
+        public static Action<Vector3> WeaponFired;
+
         public static void Register(IBulletHitReceiver target)
         {
             if (target != null && !Targets.Contains(target))
@@ -25,6 +28,11 @@ namespace HEAVYART.TopDownShooter.Netcode
         public static void Unregister(IBulletHitReceiver target)
         {
             Targets.Remove(target);
+        }
+
+        public static void NotifyWeaponFired(Vector3 worldPosition)
+        {
+            WeaponFired?.Invoke(worldPosition);
         }
     }
 }

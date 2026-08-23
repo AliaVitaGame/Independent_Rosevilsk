@@ -51,6 +51,7 @@ namespace Game.Core.Vehicles
 
             if (!TryGetComponent<ProjectMusicPlayer>(out _radio))
                 _radio = gameObject.AddComponent<ProjectMusicPlayer>();
+            _radio.ConfigureAsVehicleRadio();
 
             try
             {
