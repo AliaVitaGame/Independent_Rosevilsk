@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Core.Mission;
 using Game.Core.Vehicles;
 using Modules.TargetHints;
 using UnityEngine;
@@ -76,6 +77,9 @@ namespace Game.Core.Passengers
             if (_hintArrow == null)
                 _hintArrow = FindFirstObjectByType<TargetHintArrow>(FindObjectsInactive.Include);
 
+            EnsureHintArrowPool();
+            EnsurePressureSystems();
+
             if (_exitHint == null)
             {
                 var exitPoint = GameObject.Find("ExitPoint");
@@ -88,6 +92,8 @@ namespace Game.Core.Passengers
             }
 
             _exitHint?.SetKind(TargetHintKind.Exit);
+            _exitHint?.SetHintEnabled(false);
+            _vehicleHint?.SetHintEnabled(false);
             ResolveSpawnPoints();
         }
 
@@ -256,100 +262,44 @@ namespace Game.Core.Passengers
 
         private void RefreshHintTarget()
         {
-            if (_hintArrow == null)
-                return;
-
             var isDriving = _vehicle != null && _vehicle.IsDriving;
-            var nearestPassenger = FindNearestWaitingPassenger();
+            _vehicleHint?.SetHintEnabled(!isDriving);
+            _exitHint?.SetHintEnabled(_boardedCount > 0);
 
-            if (!isDriving && !IsFull && _vehicleHint != null)
-            {
-                nearestPassenger?.HintTarget?.SetHintEnabled(false);
-                _exitHint?.SetHintEnabled(false);
-                _vehicleHint.SetHintEnabled(true);
-                _hintArrow.gameObject.SetActive(true);
-                _hintArrow.SetTarget(_vehicleHint);
-                return;
-            }
-
-            if (isDriving && nearestPassenger != null && !IsFull)
-            {
-                _vehicleHint?.SetHintEnabled(false);
-                _exitHint?.SetHintEnabled(false);
-                SetOnlyPassengerHintEnabled(nearestPassenger);
-                _hintArrow.gameObject.SetActive(true);
-                _hintArrow.SetTarget(nearestPassenger.HintTarget);
-                return;
-            }
-
-            if (IsFull && !isDriving && _vehicleHint != null)
-            {
-                DisablePassengerHints();
-                _exitHint?.SetHintEnabled(false);
-                _vehicleHint.SetHintEnabled(true);
-                _hintArrow.gameObject.SetActive(true);
-                _hintArrow.SetTarget(_vehicleHint);
-                return;
-            }
-
-            if (IsFull && isDriving && _exitHint != null)
-            {
-                DisablePassengerHints();
-                _vehicleHint?.SetHintEnabled(false);
-                _exitHint.SetHintEnabled(true);
-                _hintArrow.gameObject.SetActive(true);
-                _hintArrow.SetTarget(_exitHint);
-                return;
-            }
-
-            _vehicleHint?.SetHintEnabled(false);
-            _exitHint?.SetHintEnabled(false);
-            DisablePassengerHints();
-            _hintArrow.SetTarget(null);
-        }
-
-        private PassengerNpc FindNearestWaitingPassenger()
-        {
-            if (_vehicle == null)
-                return null;
-
-            PassengerNpc nearest = null;
-            var nearestSqr = float.MaxValue;
-            var origin = _vehicle.transform.position;
-
-            for (var i = 0; i < _waitingPassengers.Count; i++)
-            {
-                var passenger = _waitingPassengers[i];
-                if (passenger == null || !passenger.IsWaiting)
-                    continue;
-
-                var sqr = (passenger.transform.position - origin).sqrMagnitude;
-                if (sqr >= nearestSqr)
-                    continue;
-
-                nearestSqr = sqr;
-                nearest = passenger;
-            }
-
-            return nearest;
-        }
-
-        private void SetOnlyPassengerHintEnabled(PassengerNpc active)
-        {
             for (var i = 0; i < _waitingPassengers.Count; i++)
             {
                 var passenger = _waitingPassengers[i];
                 if (passenger == null)
                     continue;
 
-                passenger.HintTarget?.SetHintEnabled(passenger == active && passenger.IsWaiting);
+                passenger.HintTarget?.SetHintEnabled(passenger.IsWaiting);
             }
         }
 
-        private void DisablePassengerHints()
+        private void EnsureHintArrowPool()
         {
-            for (var i = 0; i < _waitingPassengers.Count; i++)
-                _waitingPassengers[i]?.HintTarget?.SetHintEnabled(false);
+            if (_hintArrow == null)
+                return;
+
+            var host = _hintArrow.transform.parent != null
+                ? _hintArrow.transform.parent.gameObject
+                : _hintArrow.gameObject;
+            if (host.GetComponent<TargetHintArrowPool>() == null)
+                host.AddComponent<TargetHintArrowPool>();
+        }
+
+        private void EnsurePressureSystems()
+        {
+            if (GetComponent<LocationPressureSystem>() == null)
+                gameObject.AddComponent<LocationPressureSystem>();
+
+            if (FindFirstObjectByType<LocationTimerUI>(FindObjectsInactive.Include) != null)
+                return;
+
+            var canvas = GameObject.Find("InGameUI");
+            var host = canvas != null ? canvas : gameObject;
+            if (host.GetComponent<LocationTimerUI>() == null)
+                host.AddComponent<LocationTimerUI>();
         }
 
         private bool IsVehicleSlowEnough(Transform vehicleTransform)
