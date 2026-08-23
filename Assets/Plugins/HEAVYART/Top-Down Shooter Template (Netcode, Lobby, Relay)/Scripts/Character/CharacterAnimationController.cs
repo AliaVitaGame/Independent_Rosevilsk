@@ -26,6 +26,8 @@ namespace HEAVYART.TopDownShooter.Netcode
         private bool aimChest;
         private bool aimUpperChest;
         private bool aimBonesCaptured;
+        private float visualYawOffset;
+        private bool continuousLookYaw;
 
         private Vector3 movementDirection;
         private float movementSpeed;
@@ -61,21 +63,32 @@ namespace HEAVYART.TopDownShooter.Netcode
         /// <summary>
         /// Retarget gameplay animation/IK to another humanoid Animator (e.g. customized body).
         /// </summary>
-        public void RebindToAnimator(Animator newAnimator)
+        public void RebindToAnimator(
+            Animator newAnimator,
+            bool allowProceduralAiming = true,
+            float yawOffset = 0f,
+            bool followLookContinuously = false)
         {
             if (newAnimator == null)
                 return;
 
-            BindAnimator(newAnimator);
+            BindAnimator(newAnimator, allowProceduralAiming, yawOffset, followLookContinuously);
         }
 
-        private void BindAnimator(Animator target)
+        private void BindAnimator(
+            Animator target,
+            bool allowProceduralAiming = true,
+            float yawOffset = 0f,
+            bool followLookContinuously = false)
         {
             animator = target;
             if (animator == null)
                 return;
 
-            spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            visualYawOffset = yawOffset;
+            continuousLookYaw = followLookContinuously;
+
+            spine = allowProceduralAiming ? animator.GetBoneTransform(HumanBodyBones.Spine) : null;
             chest = null;
             upperChest = null;
             aimChest = false;
@@ -104,9 +117,11 @@ namespace HEAVYART.TopDownShooter.Netcode
 
             Quaternion targetRotation;
 
+            var lookFlat = FlattenHorizontal(lineOfSightTransform.forward);
+
             if (movementSpeed > 0.01f) // If character moves
             {
-                bool isOppositeDirections = Vector3.Dot(movementDirection, lineOfSightTransform.forward) < 0;
+                bool isOppositeDirections = Vector3.Dot(movementDirection, lookFlat) < 0;
 
                 //Set movement direction
                 animator.SetFloat("Movement", isOppositeDirections ? -1 : 1);
@@ -116,26 +131,28 @@ namespace HEAVYART.TopDownShooter.Netcode
                 //Rotate body in direction of aiming (a little bit). Fixes Quaternion.Slerp rotation in wrong direction.
 
                 //Calculate additional angle (if character moves forward)
-                float additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, lineOfSightTransform.forward).eulerAngles.y);
+                float additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, lookFlat).eulerAngles.y);
 
                 if (isOppositeDirections)
                 {
                     //Calculate additional angle if character moves backwards
                     targetRotation *= Quaternion.Euler(0, -180, 0);
-                    additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, -lineOfSightTransform.forward).eulerAngles.y);
+                    additionalLineOfSightAngle = Mathf.DeltaAngle(0, Quaternion.FromToRotation(movementDirection, -lookFlat).eulerAngles.y);
                 }
 
                 //Apply additional rotation
-                float lineOfSightRotationFactor = 0.1f;
+                float lineOfSightRotationFactor = continuousLookYaw ? 0.35f : 0.1f;
                 targetRotation *= Quaternion.Euler(0, additionalLineOfSightAngle * lineOfSightRotationFactor, 0);
             }
             else // If it stands
             {
-                //Rotate body (legs) to closest direction
-                targetRotation = Quaternion.LookRotation(FindClosestDirection(lineOfSightTransform.forward));
+                targetRotation = continuousLookYaw
+                    ? Quaternion.LookRotation(lookFlat)
+                    : Quaternion.LookRotation(FindClosestDirection(lookFlat));
             }
 
-            animator.transform.rotation = Quaternion.Slerp(animator.transform.rotation, targetRotation, rotationSmoothness * Time.deltaTime);
+            var yawOnly = Quaternion.Euler(0f, targetRotation.eulerAngles.y + visualYawOffset, 0f);
+            animator.transform.rotation = Quaternion.Slerp(animator.transform.rotation, yawOnly, rotationSmoothness * Time.deltaTime);
 
             //Rotate skeleton parts
             HandleAiming(spine, spineWeight);
@@ -239,6 +256,12 @@ namespace HEAVYART.TopDownShooter.Netcode
         public void SetTargetingTransform(Transform targetingTransform)
         {
             this.targetingTransform = targetingTransform;
+        }
+
+        private static Vector3 FlattenHorizontal(Vector3 direction)
+        {
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
         }
 
         private Vector3 FindClosestDirection(Vector3 directionToCompareWith)

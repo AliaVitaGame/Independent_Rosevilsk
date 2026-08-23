@@ -11,6 +11,10 @@ namespace Modules.CharacterCreator
     /// </summary>
     public static class PlayerAppearanceApplier
     {
+        // Inverse(CC hand_r) * Kyle Right_Wrist, composed with Kyle's Y=90 socket.
+        private static readonly Quaternion CcRightHandSocketRotation =
+            Quaternion.Euler(8.62f, 207.34f, 181.63f) * Quaternion.Euler(0f, 90f, 0f);
+
         public static void ApplyToLocalPlayer(CC_CharacterData appearance)
         {
             if (appearance == null || string.IsNullOrEmpty(appearance.CharacterPrefab))
@@ -50,7 +54,12 @@ namespace Modules.CharacterCreator
 
             var existing = FindAppearanceRoot(host);
             if (IsAppearanceAlreadyApplied(existing, appearance.CharacterPrefab))
+            {
+                var existingAnimator = existing.GetComponentInChildren<Animator>();
+                if (existingAnimator != null)
+                    BindWeaponsToVisualHands(host, existingAnimator);
                 return;
+            }
 
             if (existing != null)
             {
@@ -126,7 +135,11 @@ namespace Modules.CharacterCreator
 
             var animationController = host.GetComponent<CharacterAnimationController>();
             if (animationController != null)
-                animationController.RebindToAnimator(bodyAnimator);
+                animationController.RebindToAnimator(
+                    bodyAnimator,
+                    allowProceduralAiming: false,
+                    yawOffset: 0f,
+                    followLookContinuously: true);
 
             var weaponSystem = host.GetComponent<WeaponControlSystem>();
             if (weaponSystem != null)
@@ -165,12 +178,13 @@ namespace Modules.CharacterCreator
             if (socket == null)
                 return;
 
-            // Kyle wrist offsets are in a different bone space than CharacterCustomizer hand_r.
             socket.SetParent(visualHand, false);
             socket.localPosition = Vector3.zero;
-            socket.localRotation = Quaternion.identity;
+            // Kyle instance uses (0, 90, 0) on the wrist. CC hand_r axes differ; bake T-pose correction.
+            socket.localRotation = socketName == "RightHandWeapons"
+                ? CcRightHandSocketRotation
+                : Quaternion.identity;
         }
-
         private static void RescueWeaponsOntoGameplayHands(Transform host, Animator gameplayAnimator)
         {
             if (host == null || gameplayAnimator == null)
