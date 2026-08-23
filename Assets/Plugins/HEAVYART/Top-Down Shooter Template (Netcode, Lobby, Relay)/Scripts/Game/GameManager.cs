@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -90,8 +92,71 @@ namespace HEAVYART.TopDownShooter.Netcode
             // scans the loaded scene. Starting the host from Awake races that pass.
             yield return null;
 
-            if (!networkManager.IsListening && !networkManager.StartHost())
+            if (networkManager.IsListening)
+                yield break;
+
+            // Port 7777 often stays bound after a dirty Play Mode exit (UDP leak in UTP).
+            // Probe first so we don't call StartHost on a busy port (avoids red console spam).
+            const ushort basePort = 7777;
+            const int maxAttempts = 16;
+
+            if (!TryFindFreeUdpPort(basePort, maxAttempts, out var port))
+            {
+                Debug.LogError(
+                    "Unable to start the single-player host. " +
+                    "UDP ports 7777-7792 are busy — stop other Play Mode instances or restart the Unity Editor.");
+                yield break;
+            }
+
+            var address = string.IsNullOrEmpty(networkTransport.ConnectionData.Address)
+                ? "127.0.0.1"
+                : networkTransport.ConnectionData.Address;
+            var listenAddress = string.IsNullOrEmpty(networkTransport.ConnectionData.ServerListenAddress)
+                ? address
+                : networkTransport.ConnectionData.ServerListenAddress;
+            networkTransport.SetConnectionData(address, port, listenAddress);
+
+            if (!networkManager.StartHost())
+            {
                 Debug.LogError("Unable to start the single-player host.");
+                yield break;
+            }
+
+            if (port != basePort)
+                Debug.Log($"[GameManager] Offline host bound to port {port} (preferred {basePort} was busy).");
+        }
+
+        private static bool TryFindFreeUdpPort(ushort basePort, int maxAttempts, out ushort port)
+        {
+            for (var i = 0; i < maxAttempts; i++)
+            {
+                port = (ushort)(basePort + i);
+                if (IsUdpPortAvailable(port))
+                    return true;
+            }
+
+            port = 0;
+            return false;
+        }
+
+        private static bool IsUdpPortAvailable(ushort port)
+        {
+            Socket socket = null;
+            try
+            {
+                socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                socket.ExclusiveAddressUse = true;
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, port));
+                return true;
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
+            finally
+            {
+                socket?.Close();
+            }
         }
 
         IEnumerator WaitForNetworkReady()

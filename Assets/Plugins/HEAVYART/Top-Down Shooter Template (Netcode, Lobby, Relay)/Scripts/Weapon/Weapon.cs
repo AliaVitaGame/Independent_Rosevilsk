@@ -98,7 +98,12 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         private void SpawnBullet(BulletParameters bulletParameters)
         {
+            if (weaponModelTransformKeeper == null || weaponModelTransformKeeper.firePointTransform == null)
+                return;
+
             int gunIndex = bulletParameters.gunIndex;
+            if (gunIndex < 0 || gunIndex >= gunDirectionTransforms.Count || gunDirectionTransforms[gunIndex] == null)
+                return;
 
             Transform instantiatedBullet = Instantiate(weaponConfig.bulletPrefab, weaponModelTransformKeeper.firePointTransform.position, gunDirectionTransforms[gunIndex].rotation);
             instantiatedBullet.GetComponent<Bullet>().Initialize(bulletParameters, weaponModelTransformKeeper.firePointTransform, weaponConfig.muzzleFlashPrefab);
@@ -106,11 +111,17 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         public void ShowWeapon()
         {
+            if (weaponModelTransformKeeper == null || weaponModelTransformKeeper.weaponModel == null)
+                return;
+
             weaponModelTransformKeeper.weaponModel.gameObject.SetActive(true);
         }
 
         public void HideWeapon()
         {
+            if (weaponModelTransformKeeper == null || weaponModelTransformKeeper.weaponModel == null)
+                return;
+
             weaponModelTransformKeeper.weaponModel.gameObject.SetActive(false);
         }
     }

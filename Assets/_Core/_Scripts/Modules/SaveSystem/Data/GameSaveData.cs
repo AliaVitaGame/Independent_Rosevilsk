@@ -14,6 +14,7 @@ namespace Modules.SaveSystem.Data
         public string sceneName = "Game";
 
         public PlayerSaveData player = new();
+        public CharacterAppearanceSaveData appearance = new();
         public VehicleSaveData vehicle = new();
         public PassengerSaveData passengers = new();
         public List<CurrencySaveEntry> currencies = new();
@@ -26,6 +27,15 @@ namespace Modules.SaveSystem.Data
         public bool hasValue;
         public Vector3 position;
         public Vector3 rotationEuler;
+    }
+
+    [Serializable]
+    public sealed class CharacterAppearanceSaveData
+    {
+        public bool hasValue;
+        public string characterName;
+        public string characterPrefab;
+        public string appearanceJson;
     }
 
     [Serializable]

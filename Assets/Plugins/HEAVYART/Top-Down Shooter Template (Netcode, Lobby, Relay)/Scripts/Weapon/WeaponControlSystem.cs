@@ -37,7 +37,7 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         public void Fire()
         {
-            if (healthController.isAlive)
+            if (healthController.isAlive && selectedWeapon != null)
                 selectedWeapon.Fire();
         }
 
@@ -73,6 +73,11 @@ namespace HEAVYART.TopDownShooter.Netcode
             ActivateWeapon(weaponType);
         }
 
+        public void ReapplySelectedWeaponVisuals()
+        {
+            ActivateWeapon(selectedWeapon != null ? selectedWeapon.weaponType : WeaponType.Pistol);
+        }
+
         private void ActivateWeapon(WeaponType weaponType)
         {
             //Check if weapon is available
@@ -91,6 +96,9 @@ namespace HEAVYART.TopDownShooter.Netcode
 
             for (int i = 0; i < weapons.Count; i++)
             {
+                if (weapons[i] == null)
+                    continue;
+
                 //Hide all active weapons
                 weapons[i].HideWeapon();
 
@@ -99,12 +107,15 @@ namespace HEAVYART.TopDownShooter.Netcode
                 {
                     //Activate it
                     weapons[i].ShowWeapon();
-                    animationController.SetTargetingTransform(weapons[i].targetingTransform);
+                    if (weapons[i].targetingTransform != null)
+                        animationController.SetTargetingTransform(weapons[i].targetingTransform);
                     selectedWeapon = weapons[i];
 
-                    //Handle weapon grip
+                    //Handle weapon grip (Kyle body — full IK OK).
                     WeaponGrip weaponGrip = weapons[i].weaponGrip;
-                    Transform leftHandGripIKTransform = weapons[i].weaponModelTransformKeeper.leftHandGripIKTransform;
+                    Transform leftHandGripIKTransform = weapons[i].weaponModelTransformKeeper != null
+                        ? weapons[i].weaponModelTransformKeeper.leftHandGripIKTransform
+                        : null;
                     animationController.UpdateWeaponGrip(weaponGrip, leftHandGripIKTransform);
                 }
             }

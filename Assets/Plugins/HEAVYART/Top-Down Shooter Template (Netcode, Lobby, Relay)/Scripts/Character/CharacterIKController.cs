@@ -1,22 +1,17 @@
-using HEAVYART.TopDownShooter.Netcode;
-using UnityEditor;
 using UnityEngine;
 
 namespace HEAVYART.TopDownShooter.Netcode
 {
     [RequireComponent(typeof(Animator))]
-
     public class CharacterIKController : MonoBehaviour
     {
         private Animator animator;
         private Transform leftHandGripTransform;
-
         private HealthController healthController;
 
         void Start()
         {
-            animator = GetComponent<Animator>();
-            healthController = transform.root.GetComponent<HealthController>();
+            EnsureRefs();
         }
 
         public void UpdateLeftHandGripTransform(Transform updatedGripTransform)
@@ -26,11 +21,16 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         void OnAnimatorIK()
         {
+            EnsureRefs();
+
+            if (healthController == null || animator == null)
+                return;
+
             if (healthController.isAlive == false)
                 return;
 
-            // Set the left hand target position and rotation, if one has been assigned
-            if (leftHandGripTransform != null)
+            // Unity fake-null: destroyed transforms still fail `!= null` with System.Object compare.
+            if (leftHandGripTransform)
             {
                 animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
                 animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1);
@@ -43,6 +43,15 @@ namespace HEAVYART.TopDownShooter.Netcode
                 animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0);
                 animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0);
             }
+        }
+
+        private void EnsureRefs()
+        {
+            if (animator == null)
+                animator = GetComponent<Animator>();
+
+            if (healthController == null)
+                healthController = transform.root.GetComponent<HealthController>();
         }
     }
 }

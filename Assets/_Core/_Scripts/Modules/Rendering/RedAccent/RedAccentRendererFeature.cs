@@ -12,8 +12,10 @@ namespace Modules.Rendering.RedAccent {
     public sealed class RedAccentRendererFeature : ScriptableRendererFeature {
         [System.Serializable]
         private sealed class Settings {
-            [Range(0f, 1f)] public float redThreshold = 0.12f;
-            [Range(0.001f, 0.5f)] public float redFeather = 0.08f;
+            [Tooltip("Max hue distance from pure red (0-1 circle). ~0.04 ≈ 14°. Lower = stricter true-red only.")]
+            [Range(0.01f, 0.15f)] public float redThreshold = 0.04f;
+            [Tooltip("Soft falloff past the hue threshold. Keep small to avoid orange bleed.")]
+            [Range(0.001f, 0.1f)] public float redFeather = 0.02f;
             [Range(0f, 2f)] public float redSaturation = 1.3f;
             [Range(0.5f, 2.5f)] public float grayscaleContrast = 1.3f;
             [Range(-2f, 2f)] public float grayscaleExposure = -0.25f;
@@ -37,7 +39,9 @@ namespace Modules.Rendering.RedAccent {
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
-            if (_pass == null || renderingData.cameraData.cameraType != CameraType.Game) {
+            if (_pass == null
+                || !Application.isPlaying
+                || renderingData.cameraData.cameraType != CameraType.Game) {
                 return;
             }
 

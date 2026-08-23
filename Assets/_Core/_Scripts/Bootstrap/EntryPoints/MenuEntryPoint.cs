@@ -1,8 +1,10 @@
 using System;
+using CC;
 using Game.Bootstrap.SceneManagement;
 using Game.Core.StateMachines;
 using Game.UI.MainMenu;
 using HEAVYART.TopDownShooter.Netcode;
+using Modules.CharacterCreator;
 using Modules.SaveSystem;
 using Modules.SaveSystem.UI;
 using UnityEngine;
@@ -17,7 +19,9 @@ namespace Game.Shared
 
         private MainMenuController _menuController;
         private SaveSlotsPanelController _slotsPanel;
+        private CharacterCreatorController _characterCreator;
         private SaveSlotsPanelMode _pendingMode;
+        private int _pendingSlotIndex = -1;
         private bool _isLoading;
 
         public MenuEntryPoint(IStateMachine stateMachine, IGameSaveService saveService)
@@ -43,6 +47,7 @@ namespace Game.Shared
             }
 
             EnsureSlotsPanel();
+            EnsureCharacterCreator();
 
             _menuController.ContinueClicked += OnContinue;
             _menuController.NewGameClicked += OnNewGame;
@@ -52,6 +57,12 @@ namespace Game.Shared
 
             if (_slotsPanel != null)
                 _slotsPanel.SlotChosen += OnSlotChosen;
+
+            if (_characterCreator != null)
+            {
+                _characterCreator.Confirmed += OnCharacterConfirmed;
+                _characterCreator.Cancelled += OnCharacterCancelled;
+            }
 
             RefreshMenuSaveButtons();
         }
@@ -69,6 +80,12 @@ namespace Game.Shared
 
             if (_slotsPanel != null)
                 _slotsPanel.SlotChosen -= OnSlotChosen;
+
+            if (_characterCreator != null)
+            {
+                _characterCreator.Confirmed -= OnCharacterConfirmed;
+                _characterCreator.Cancelled -= OnCharacterCancelled;
+            }
         }
 
         private void EnsureSlotsPanel()
@@ -92,10 +109,34 @@ namespace Game.Shared
             _slotsPanel.Initialize(_saveService);
         }
 
+        private void EnsureCharacterCreator()
+        {
+            var sceneCreator =
+                UnityEngine.Object.FindFirstObjectByType<CharacterCreatorController>(FindObjectsInactive.Include);
+
+            if (sceneCreator != null)
+            {
+                if (_characterCreator != null && !ReferenceEquals(_characterCreator, sceneCreator))
+                {
+                    _characterCreator.Confirmed -= OnCharacterConfirmed;
+                    _characterCreator.Cancelled -= OnCharacterCancelled;
+                }
+
+                _characterCreator = sceneCreator;
+                return;
+            }
+
+            if (_characterCreator != null)
+                return;
+
+            var go = new GameObject("CharacterCreatorRoot");
+            _characterCreator = go.AddComponent<CharacterCreatorController>();
+            go.SetActive(false);
+        }
+
         private void RefreshMenuSaveButtons()
         {
             var hasSaves = _saveService.HasAnySave();
-            // Continue only when a save exists. Load stays available to open the slots panel.
             _menuController.SetContinueInteractable(hasSaves);
             _menuController.SetLoadInteractable(true);
         }
@@ -134,7 +175,6 @@ namespace Game.Shared
                     return;
             }
 
-            // Always open the panel. Empty slots stay non-clickable inside Load mode.
             _pendingMode = SaveSlotsPanelMode.LoadGame;
             _slotsPanel.Show(SaveSlotsPanelMode.LoadGame);
 
@@ -145,19 +185,67 @@ namespace Game.Shared
         private void OnSlotChosen(int slotIndex)
         {
             if (_pendingMode == SaveSlotsPanelMode.NewGame)
-                _saveService.BeginNewGame(slotIndex);
-            else
             {
-                if (!_saveService.HasAnySave() || _saveService.GetSlot(slotIndex).isEmpty)
-                {
-                    Debug.LogWarning($"[MainMenu] Load Game: slot {slotIndex + 1} is empty.");
-                    return;
-                }
-
-                _saveService.BeginLoadGame(slotIndex);
+                _pendingSlotIndex = slotIndex;
+                OpenCharacterCreator(slotIndex);
+                return;
             }
 
+            if (!_saveService.HasAnySave() || _saveService.GetSlot(slotIndex).isEmpty)
+            {
+                Debug.LogWarning($"[MainMenu] Load Game: slot {slotIndex + 1} is empty.");
+                return;
+            }
+
+            _saveService.BeginLoadGame(slotIndex);
             StartGame();
+        }
+
+        private void OpenCharacterCreator(int slotIndex)
+        {
+            EnsureCharacterCreator();
+            if (_characterCreator == null)
+            {
+                Debug.LogError("[MainMenu] Character creator is missing.");
+                return;
+            }
+
+            _characterCreator.Confirmed -= OnCharacterConfirmed;
+            _characterCreator.Cancelled -= OnCharacterCancelled;
+            _characterCreator.Confirmed += OnCharacterConfirmed;
+            _characterCreator.Cancelled += OnCharacterCancelled;
+
+            _pendingSlotIndex = slotIndex;
+            _menuController.SetInteractable(false);
+            _slotsPanel?.Hide();
+            _characterCreator.ShowForNewGame(slotIndex);
+        }
+
+        private void OnCharacterConfirmed(int slotIndex, CC_CharacterData characterData)
+        {
+            Debug.Log(
+                $"[MainMenu] Character confirmed for slot {slotIndex}: " +
+                $"prefab='{characterData?.CharacterPrefab}' name='{characterData?.CharacterName}'.");
+
+            var slot = slotIndex >= 0 ? slotIndex : _pendingSlotIndex;
+            if (slot < 0)
+            {
+                Debug.LogWarning("[MainMenu] Character confirmed without a pending slot.");
+                return;
+            }
+
+            var appearance = CharacterAppearanceCodec.ToSaveData(characterData);
+            _saveService.BeginNewGame(slot, appearance);
+            _pendingSlotIndex = -1;
+            _characterCreator?.Hide();
+            StartGame();
+        }
+
+        private void OnCharacterCancelled()
+        {
+            _pendingSlotIndex = -1;
+            _menuController.SetInteractable(true);
+            RefreshMenuSaveButtons();
         }
 
         private void OnNpcs() { }
@@ -172,6 +260,7 @@ namespace Game.Shared
             _isLoading = true;
             _menuController.SetInteractable(false);
             _slotsPanel?.Hide();
+            _characterCreator?.Hide();
 
             var lobbyManager = LobbyManager.Instance;
             if (lobbyManager == null)

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using GameTest;
+using Modules.CharacterCreator;
 using Modules.SaveSystem;
 using Modules.SaveSystem.Runtime;
 using UnityEngine;
@@ -71,7 +72,6 @@ namespace Game.Shared
             if (_saveService == null)
                 return;
 
-            // Wait until the local player exists (Netcode spawn), then apply pending load.
             const int maxFrames = 300;
             for (var i = 0; i < maxFrames; i++)
             {
@@ -80,14 +80,36 @@ namespace Game.Shared
                 if (HasLocalPlayer())
                 {
                     _saveService.ApplyPendingLoadToWorld();
+                    // One more frame so Model/Animator are fully ready, then re-apply appearance.
+                    await Awaitable.NextFrameAsync(cancellation);
+                    ReapplyAppearance();
                     return;
                 }
 
                 await Awaitable.NextFrameAsync(cancellation);
             }
 
-            // Apply currencies/passengers even if player spawn is delayed.
             _saveService.ApplyPendingLoadToWorld();
+            ReapplyAppearance();
+        }
+
+        private void ReapplyAppearance()
+        {
+            if (_saveService == null)
+                return;
+
+            var saveAppearance = _saveService.GetActiveAppearance();
+            if (saveAppearance == null || !saveAppearance.hasValue)
+                return;
+
+            var appearance = CharacterAppearanceCodec.FromSaveData(saveAppearance);
+            if (appearance == null)
+            {
+                Debug.LogWarning("[Appearance] Saved appearance could not be decoded.");
+                return;
+            }
+
+            PlayerAppearanceApplier.ApplyToLocalPlayer(appearance);
         }
 
         private static bool HasLocalPlayer()
@@ -100,7 +122,7 @@ namespace Game.Shared
                     return true;
             }
 
-            return false;
+            return players != null && players.Length > 0;
         }
     }
 }

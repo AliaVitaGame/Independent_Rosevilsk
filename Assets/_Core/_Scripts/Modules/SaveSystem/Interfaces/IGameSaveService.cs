@@ -13,12 +13,14 @@ namespace Modules.SaveSystem
         IReadOnlyList<SaveSlotInfo> GetSlots();
         SaveSlotInfo GetSlot(int slotIndex);
 
-        GameSaveData BeginNewGame(int slotIndex);
+        GameSaveData BeginNewGame(int slotIndex, CharacterAppearanceSaveData appearance = null);
         GameSaveData BeginLoadGame(int slotIndex);
         bool TryBeginContinue(out GameSaveData data);
 
         void CaptureAndSaveActiveSlot();
         bool TryConsumePendingLoad(out GameSaveData data);
         void ApplyPendingLoadToWorld();
+
+        CharacterAppearanceSaveData GetActiveAppearance();
     }
 }

@@ -34,14 +34,25 @@ namespace CC
         //Initializes this script - run on Start by default but you can run it whenever, see InstantiateCharacter for example
         public void Initialize()
         {
+            Initialize(null);
+        }
+
+        public void Initialize(CC_CharacterData overrideData)
+        {
+            if (string.IsNullOrEmpty(SavePath))
+                SavePath = Application.dataPath + "/CharacterCustomizer.json";
+
             //Add a blendshape manager script to every mesh
             foreach (var mesh in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>())
             {
-                mesh.gameObject.AddComponent<BlendshapeManager>().parseBlendshapes();
+                if (mesh.GetComponent<BlendshapeManager>() == null)
+                    mesh.gameObject.AddComponent<BlendshapeManager>().parseBlendshapes();
+                else
+                    mesh.GetComponent<BlendshapeManager>().parseBlendshapes();
             }
 
             //Adds an empty hair object for each hair table
-            for (int i = 0; i < HairTables.Count; i++)
+            while (HairObjects.Count < HairTables.Count)
             {
                 GameObject newHairObject = new GameObject();
                 HairObjects.Add(newHairObject);
@@ -49,18 +60,49 @@ namespace CC
             }
 
             //Adds an empty apparel object for each apparel table
-            for (int i = 0; i < ApparelTables.Count; i++)
+            while (ApparelObjects.Count < ApparelTables.Count)
             {
                 GameObject newApparelObject = new GameObject();
                 ApparelObjects.Add(newApparelObject);
                 Destroy(newApparelObject);
             }
 
-            //Load character
-            LoadFromJSON();
+            if (overrideData != null)
+            {
+                StoredCharacterData = overrideData;
+                EnsureStoredLists();
+                ApplyCharacterVars(StoredCharacterData);
+            }
+            else
+            {
+                //Load character
+                LoadFromJSON();
+            }
 
             //Initialize all UI elements (sliders, pickers etc)
             if (UI != null) UI.GetComponent<CC_UI_Util>().Initialize(this);
+        }
+
+        private void EnsureStoredLists()
+        {
+            StoredCharacterData ??= new CC_CharacterData();
+            StoredCharacterData.HairNames ??= new List<string>();
+            StoredCharacterData.HairColor ??= new List<CC_Property>();
+            StoredCharacterData.ApparelNames ??= new List<string>();
+            StoredCharacterData.ApparelMaterials ??= new List<int>();
+            StoredCharacterData.Blendshapes ??= new List<CC_Property>();
+            StoredCharacterData.FloatProperties ??= new List<CC_Property>();
+            StoredCharacterData.TextureProperties ??= new List<CC_Property>();
+            StoredCharacterData.ColorProperties ??= new List<CC_Property>();
+
+            while (StoredCharacterData.HairNames.Count < HairObjects.Count)
+                StoredCharacterData.HairNames.Add("");
+            while (StoredCharacterData.HairColor.Count < HairObjects.Count)
+                StoredCharacterData.HairColor.Add(new CC_Property());
+            while (StoredCharacterData.ApparelNames.Count < ApparelObjects.Count)
+                StoredCharacterData.ApparelNames.Add("");
+            while (StoredCharacterData.ApparelMaterials.Count < ApparelObjects.Count)
+                StoredCharacterData.ApparelMaterials.Add(0);
         }
 
         #endregion Initialize script
@@ -152,23 +194,7 @@ namespace CC
                         StoredCharacterData.CharacterName = CharacterName;
                     }
 
-                    //Resize lists
-                    while (StoredCharacterData.HairNames.Count < HairObjects.Count)
-                    {
-                        StoredCharacterData.HairNames.Add("");
-                    }
-                    while (StoredCharacterData.HairColor.Count < HairObjects.Count)
-                    {
-                        StoredCharacterData.HairColor.Add(new CC_Property());
-                    }
-                    while (StoredCharacterData.ApparelNames.Count < ApparelObjects.Count)
-                    {
-                        StoredCharacterData.ApparelNames.Add("");
-                    }
-                    while (StoredCharacterData.ApparelMaterials.Count < ApparelObjects.Count)
-                    {
-                        StoredCharacterData.ApparelMaterials.Add(0);
-                    }
+                    EnsureStoredLists();
 
                     //Apply stored data to character
                     ApplyCharacterVars(StoredCharacterData);

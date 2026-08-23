@@ -44,7 +44,7 @@ namespace Modules.SaveSystem.Services
         public IReadOnlyList<SaveSlotInfo> GetSlots() => _store.GetSlots();
         public SaveSlotInfo GetSlot(int slotIndex) => _store.GetSlot(slotIndex);
 
-        public GameSaveData BeginNewGame(int slotIndex)
+        public GameSaveData BeginNewGame(int slotIndex, CharacterAppearanceSaveData appearance = null)
         {
             ValidateSlot(slotIndex);
 
@@ -52,16 +52,40 @@ namespace Modules.SaveSystem.Services
             {
                 slotIndex = slotIndex,
                 playtimeSeconds = 0f,
-                sceneName = "Game"
+                sceneName = "Game",
+                appearance = CloneAppearance(appearance)
             };
 
             WriteDefaultCurrencies(_activeData);
             _store.Save(_activeData);
 
             _activeSlotIndex = slotIndex;
-            _pendingLoad = null;
+            _store.LastPlayedSlotIndex = slotIndex;
+            // New games still need world defaults applied once the player spawns.
+            _pendingLoad = Clone(_activeData);
             _playtimeAnchorRealtime = Time.realtimeSinceStartup;
             return _activeData;
+        }
+
+        public CharacterAppearanceSaveData GetActiveAppearance()
+        {
+            var source = _pendingLoad?.appearance ?? _activeData?.appearance;
+            if (source != null && source.hasValue)
+                return CloneAppearance(source);
+
+            // Fallback: disk may still have appearance after a respawn / domain reload.
+            if (_activeSlotIndex >= 0)
+            {
+                var disk = _store.Load(_activeSlotIndex);
+                if (disk?.appearance != null && disk.appearance.hasValue)
+                {
+                    if (_activeData != null)
+                        _activeData.appearance = CloneAppearance(disk.appearance);
+                    return CloneAppearance(disk.appearance);
+                }
+            }
+
+            return new CharacterAppearanceSaveData();
         }
 
         public GameSaveData BeginLoadGame(int slotIndex)
@@ -140,8 +164,21 @@ namespace Modules.SaveSystem.Services
         {
             ApplyCurrencies(data);
             ApplyPlayer(data);
+            ApplyAppearance(data);
             ApplyVehicle(data);
             ApplyPassengers(data);
+        }
+
+        private static void ApplyAppearance(GameSaveData data)
+        {
+            if (data?.appearance == null || !data.appearance.hasValue)
+                return;
+
+            var appearance = Modules.CharacterCreator.CharacterAppearanceCodec.FromSaveData(data.appearance);
+            if (appearance == null)
+                return;
+
+            Modules.CharacterCreator.PlayerAppearanceApplier.ApplyToLocalPlayer(appearance);
         }
 
         private void CaptureCurrencies(GameSaveData data)
@@ -181,6 +218,7 @@ namespace Modules.SaveSystem.Services
         private static void CapturePlayer(GameSaveData data)
         {
             data.player ??= new PlayerSaveData();
+            data.appearance ??= new CharacterAppearanceSaveData();
             var player = FindLocalPlayerTransform();
             if (player == null)
             {
@@ -353,5 +391,13 @@ namespace Modules.SaveSystem.Services
 
         private static GameSaveData Clone(GameSaveData source) =>
             JsonUtility.FromJson<GameSaveData>(JsonUtility.ToJson(source));
+
+        private static CharacterAppearanceSaveData CloneAppearance(CharacterAppearanceSaveData source)
+        {
+            if (source == null || !source.hasValue)
+                return new CharacterAppearanceSaveData();
+
+            return JsonUtility.FromJson<CharacterAppearanceSaveData>(JsonUtility.ToJson(source));
+        }
     }
 }

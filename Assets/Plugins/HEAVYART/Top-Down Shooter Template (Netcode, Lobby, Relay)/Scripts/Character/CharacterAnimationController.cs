@@ -23,6 +23,9 @@ namespace HEAVYART.TopDownShooter.Netcode
         private Transform spine;
         private Transform chest;
         private Transform upperChest;
+        private bool aimChest;
+        private bool aimUpperChest;
+        private bool aimBonesCaptured;
 
         private Vector3 movementDirection;
         private float movementSpeed;
@@ -38,9 +41,7 @@ namespace HEAVYART.TopDownShooter.Netcode
 
         void Awake()
         {
-            spine = animator.GetBoneTransform(HumanBodyBones.Spine);
-            chest = animator.GetBoneTransform(HumanBodyBones.Chest);
-            upperChest = animator.GetBoneTransform(HumanBodyBones.UpperChest);
+            BindAnimator(animator);
 
             lineOfSightTransform = transform.root.GetComponent<WeaponControlSystem>().lineOfSightTransform;
 
@@ -55,15 +56,42 @@ namespace HEAVYART.TopDownShooter.Netcode
             playerBehaviour = GetComponent<PlayerBehaviour>();
             healthController = GetComponent<HealthController>();
             healthController.OnDeath += PlayDeathAnimation;
+        }
 
-            iKController = animator.transform.GetComponent<CharacterIKController>();
+        /// <summary>
+        /// Retarget gameplay animation/IK to another humanoid Animator (e.g. customized body).
+        /// </summary>
+        public void RebindToAnimator(Animator newAnimator)
+        {
+            if (newAnimator == null)
+                return;
+
+            BindAnimator(newAnimator);
+        }
+
+        private void BindAnimator(Animator target)
+        {
+            animator = target;
+            if (animator == null)
+                return;
+
+            spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            chest = null;
+            upperChest = null;
+            aimChest = false;
+            aimUpperChest = false;
+            aimBonesCaptured = true;
+
+            iKController = animator.GetComponent<CharacterIKController>();
+            if (iKController == null)
+                iKController = animator.gameObject.AddComponent<CharacterIKController>();
 
             animatorLayerWeights = new float[animator.layerCount];
         }
 
         void LateUpdate()
         {
-            if (healthController.isAlive == false)
+            if (healthController == null || healthController.isAlive == false)
                 return;
 
             animator.SetFloat("Movement", 0);
@@ -146,8 +174,8 @@ namespace HEAVYART.TopDownShooter.Netcode
 
             previousPosition = transform.position;
 
-            //Handle layer switch smoothness
-            for (int i = 1; i < animatorLayerWeights.Length; i++)
+            //Handle layer switch smoothness (include base layer 0)
+            for (int i = 0; i < animatorLayerWeights.Length; i++)
             {
                 float weight = Mathf.MoveTowards(animator.GetLayerWeight(i), animatorLayerWeights[i], layerSwitchSmoothness * Time.fixedDeltaTime);
                 animator.SetLayerWeight(i, weight);
@@ -186,24 +214,26 @@ namespace HEAVYART.TopDownShooter.Netcode
                 iKController.UpdateLeftHandGripTransform(leftHandGripIKTransform);
             }
 
-            for (int i = 1; i < animatorLayerWeights.Length; i++)
-            {
-                animatorLayerWeights[i] = 0;
-            }
+            if (animatorLayerWeights == null || animator == null)
+                return;
 
-            //Turn on required layer
+            // Exclusive layer weights — having Pistol+Rifle movement both at 1 breaks CC arms.
+            for (var i = 0; i < animatorLayerWeights.Length; i++)
+                animatorLayerWeights[i] = 0;
+
             if (weaponGrip == WeaponGrip.Rifle)
             {
-                animatorLayerWeights[1] = 1;
-                animatorLayerWeights[3] = 1;
+                if (animatorLayerWeights.Length > 1) animatorLayerWeights[1] = 1;
+                if (animatorLayerWeights.Length > 3) animatorLayerWeights[3] = 1;
+            }
+            else if (weaponGrip == WeaponGrip.Pistol)
+            {
+                if (animatorLayerWeights.Length > 0) animatorLayerWeights[0] = 1;
+                if (animatorLayerWeights.Length > 2) animatorLayerWeights[2] = 1;
             }
 
-            //Turn on required layer
-            if (weaponGrip == WeaponGrip.Pistol)
-            {
-                animatorLayerWeights[0] = 1;
-                animatorLayerWeights[2] = 1;
-            }
+            for (var i = 0; i < animator.layerCount && i < animatorLayerWeights.Length; i++)
+                animator.SetLayerWeight(i, animatorLayerWeights[i]);
         }
 
         public void SetTargetingTransform(Transform targetingTransform)
